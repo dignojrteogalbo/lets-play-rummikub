@@ -16,10 +16,11 @@ type (
 		IsJoker() bool
 		IsSameColor(Piece) bool
 		IsSameValue(Piece) bool
+		Value() uint8
 	}
 
 	piece struct {
-		Value uint8
+		value uint8
 		Color
 	}
 )
@@ -42,7 +43,7 @@ func isValidPiece(p Piece) bool {
 	if !ok {
 		return false
 	}
-	if piece.Value > 13 {
+	if piece.value > 13 {
 		return false
 	}
 	if piece.Color > ColorGreen {
@@ -53,7 +54,7 @@ func isValidPiece(p Piece) bool {
 
 func (p *piece) IsJoker() bool {
 	if isValidPiece(p) {
-		return p.Value == 0
+		return p.value == 0
 	}
 	return false
 }
@@ -67,7 +68,14 @@ func (p *piece) IsSameColor(compare Piece) bool {
 
 func (p *piece) IsSameValue(compare Piece) bool {
 	if isValidPiece(p) && isValidPiece(compare) {
-		return p.Value == compare.(*piece).Value
+		return p.value == compare.(*piece).value
 	}
 	return false
+}
+
+func (p *piece) Value() uint8 {
+	if !isValidPiece(p) {
+		return 0
+	}
+	return p.value
 }

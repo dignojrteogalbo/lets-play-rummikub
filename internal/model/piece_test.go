@@ -11,7 +11,7 @@ func TestNewPiece(t *testing.T) {
 		newPiece := NewPiece(0, ColorBlack)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.Value, uint8(0))
+			assert.Equal(t, result.value, uint8(0))
 			assert.Equal(t, result.Color, ColorBlack)
 		}
 	})
@@ -19,7 +19,7 @@ func TestNewPiece(t *testing.T) {
 		newPiece := NewPiece(1, ColorBlue)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.Value, uint8(1))
+			assert.Equal(t, result.value, uint8(1))
 			assert.Equal(t, result.Color, ColorBlue)
 		}
 	})
@@ -27,7 +27,7 @@ func TestNewPiece(t *testing.T) {
 		newPiece := NewPiece(13, ColorRed)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.Value, uint8(13))
+			assert.Equal(t, result.value, uint8(13))
 			assert.Equal(t, result.Color, ColorRed)
 		}
 	})
@@ -121,5 +121,13 @@ func TestIsSameValue(t *testing.T) {
 		invalidPiece := Piece(nil)
 		redFive := NewPiece(5, ColorRed)
 		assert.False(t, redFive.IsSameValue(invalidPiece))
+	})
+}
+
+func TestValue(t *testing.T) {
+	t.Run("ShouldReturnZeroOnInvalidPiece", func(t *testing.T) {
+		piece := &piece{value: 16, Color: 5}
+		value := piece.Value()
+		assert.Zero(t, value)
 	})
 }
