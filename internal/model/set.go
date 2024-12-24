@@ -97,40 +97,37 @@ func (s *set) insertPiece(piece Piece, index int) {
 	}
 }
 
-func (s *set) insertIntoGroup(piece Piece, index int) error {
+func (s *set) insertIntoGroup(piece Piece) error {
 	if !piece.IsSameValue(s.tiles[0]) {
 		return errors.New(WrongValueForGroup)
 	}
-	s.insertPiece(piece, index)
+	s.insertPiece(piece, len(s.tiles))
 	return nil
 }
 
-func (s *set) insertIntoRun(piece Piece, index int) error {
+func (s *set) insertIntoRun(piece Piece) error {
 	if !piece.IsSameColor(s.tiles[0]) {
 		return errors.New(WrongColorForRun)
 	}
-	first, last := s.tiles[0], s.tiles[len(s.tiles)-1]
-	validStartPiece := piece.Value()+1 == first.Value()
-	validEndPiece := piece.Value()-1 == last.Value()
-	if (index == 0 && validStartPiece) || (index == len(s.tiles) && validEndPiece) {
-		s.insertPiece(piece, index)
+	if first := s.tiles[0]; piece.Value()+1 == first.Value() {
+		s.insertPiece(piece, 0)
+		return nil
+	}
+	if last := s.tiles[len(s.tiles)-1]; piece.Value()-1 == last.Value() {
+		s.insertPiece(piece, len(s.tiles))
 		return nil
 	}
 	return errors.New(CannotInsertIntoRun)
 }
 
-func (s *set) Insert(piece Piece, index int) error {
+func (s *set) Insert(piece Piece) error {
 	if !isValidPiece(piece) {
 		return errors.New(InvalidPiece)
 	}
-	if index < 0 || index > len(s.tiles) {
-		return errors.New(IndexOutOfBounds(len(s.tiles)))
-	}
 	if isGroup(s) {
-		return s.insertIntoGroup(piece, index)
-	}
-	if isRun(s) {
-		return s.insertIntoRun(piece, index)
+		return s.insertIntoGroup(piece)
+	} else if isRun(s) {
+		return s.insertIntoRun(piece)
 	}
 	return errors.New(InvalidSet)
 }
