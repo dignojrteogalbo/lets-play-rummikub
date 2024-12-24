@@ -19,5 +19,5 @@ func IndexOutOfBounds(max int, name ...string) string {
 	if len(name) > 0 {
 		label = name[0]
 	}
-	return fmt.Sprintf("%s must be >= 0 and <= %d", label, max)
+	return fmt.Sprintf("%s must be >= 0 and < %d", label, max)
 }

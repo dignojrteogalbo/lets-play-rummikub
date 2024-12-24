@@ -74,87 +74,117 @@ func TestIsRun(t *testing.T) {
 	})
 }
 
-func TestInsert(t *testing.T) {
-	// invalid cases
-	t.Run("ShouldReturnErrorOnInvalidPiece", func(t *testing.T) {
-		invalidPiece := &piece{value: 73, Color: 11}
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(invalidPiece, 0)
-		assert.EqualError(t, err, "piece is invalid")
+func TestPiece(t *testing.T) {
+	t.Run("ShouldReturnErrorOnInvalidSet", func(t *testing.T) {
+		emptySet := new(set)
+		result, err := emptySet.Piece(0)
+		assert.EqualError(t, err, InvalidSet)
+		assert.Nil(t, result)
 	})
 	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
-		piece := NewPiece(3, ColorRed)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, -1)
-		assert.EqualError(t, err, "index must be >= 0 and <= 3")
+		group := &set{createGroupTiles(t, uint(3), uint8(1))}
+		result, err := group.Piece(-1)
+		assert.EqualError(t, err, IndexOutOfBounds(2))
+		assert.Nil(t, result)
+		result, err = group.Piece(3)
+		assert.EqualError(t, err, IndexOutOfBounds(2))
+		assert.Nil(t, result)
 	})
-	t.Run("ShouldReturnErrorOnInvalidSet", func(t *testing.T) {
-		piece := NewPiece(3, ColorRed)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorBlack), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, 0)
-		assert.EqualError(t, err, "set is invalid")
-	})
-	// group cases
-	t.Run("ShouldInsertAtEndOfGroup", func(t *testing.T) {
-		piece := NewPiece(1, ColorRed)
-		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
-		err := group.Insert(piece, 3)
+	t.Run("ShouldReturnPiece", func(t *testing.T) {
+		run := &set{tiles: createRunTiles(t, 1, 3, ColorBlue)}
+		result, err := run.Piece(0)
 		assert.NoError(t, err)
-		expectedTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen), NewPiece(1, ColorRed)}
-		assert.Equal(t, group.tiles, expectedTiles)
-	})
-	t.Run("ShouldInsertAtMiddleOfGroup", func(t *testing.T) {
-		piece := NewPiece(1, ColorRed)
-		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
-		err := group.Insert(piece, 1)
+		assert.Equal(t, result, NewPiece(1, ColorBlue))
+		result, err = run.Piece(1)
 		assert.NoError(t, err)
-		expectedTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorRed), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}
-		assert.Equal(t, group.tiles, expectedTiles)
-	})
-	t.Run("ShouldInsertAtStartOfGroup", func(t *testing.T) {
-		piece := NewPiece(1, ColorRed)
-		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
-		err := group.Insert(piece, 0)
+		assert.Equal(t, result, NewPiece(2, ColorBlue))
+		result, err = run.Piece(2)
 		assert.NoError(t, err)
-		expectedTiles := []Piece{NewPiece(1, ColorRed), NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}
-		assert.Equal(t, group.tiles, expectedTiles)
-	})
-	t.Run("ShouldReturnErrorOnWrongValue", func(t *testing.T) {
-		piece := NewPiece(13, ColorRed)
-		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
-		err := group.Insert(piece, 0)
-		assert.EqualError(t, err, "piece does not match the value of the group")
-	})
-	// run cases
-	t.Run("ShouldInsertAtEndOfRun", func(t *testing.T) {
-		piece := NewPiece(7, ColorRed)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, 3)
-		expectedTiles := []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed), NewPiece(7, ColorRed)}
-		assert.NoError(t, err)
-		assert.Equal(t, run.tiles, expectedTiles)
-	})
-	t.Run("ShouldReturnErrorOnMiddleInsert", func(t *testing.T) {
-		piece := NewPiece(5, ColorRed)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, 1)
-		assert.EqualError(t, err, "piece cannot be inserted into run")
-	})
-	t.Run("ShouldInsertAtStartOfRun", func(t *testing.T) {
-		piece := NewPiece(3, ColorRed)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, 0)
-		expectedTiles := []Piece{NewPiece(3, ColorRed), NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}
-		assert.NoError(t, err)
-		assert.Equal(t, run.tiles, expectedTiles)
-	})
-	t.Run("ShouldReturnErrorOnWrongColor", func(t *testing.T) {
-		piece := NewPiece(3, ColorBlack)
-		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		err := run.Insert(piece, 0)
-		assert.EqualError(t, err, "piece does not match the color of the run")
+		assert.Equal(t, result, NewPiece(3, ColorBlue))
 	})
 }
+
+// func TestInsert(t *testing.T) {
+// 	// invalid cases
+// 	t.Run("ShouldReturnErrorOnInvalidPiece", func(t *testing.T) {
+// 		invalidPiece := &piece{value: 73, Color: 11}
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(invalidPiece, 0)
+// 		assert.EqualError(t, err, "piece is invalid")
+// 	})
+// 	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
+// 		piece := NewPiece(3, ColorRed)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, -1)
+// 		assert.EqualError(t, err, "index must be >= 0 and <= 3")
+// 	})
+// 	t.Run("ShouldReturnErrorOnInvalidSet", func(t *testing.T) {
+// 		piece := NewPiece(3, ColorRed)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorBlack), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, 0)
+// 		assert.EqualError(t, err, "set is invalid")
+// 	})
+// 	// group cases
+// 	t.Run("ShouldInsertAtEndOfGroup", func(t *testing.T) {
+// 		piece := NewPiece(1, ColorRed)
+// 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
+// 		err := group.Insert(piece, 3)
+// 		assert.NoError(t, err)
+// 		expectedTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen), NewPiece(1, ColorRed)}
+// 		assert.Equal(t, group.tiles, expectedTiles)
+// 	})
+// 	t.Run("ShouldInsertAtMiddleOfGroup", func(t *testing.T) {
+// 		piece := NewPiece(1, ColorRed)
+// 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
+// 		err := group.Insert(piece, 1)
+// 		assert.NoError(t, err)
+// 		expectedTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorRed), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}
+// 		assert.Equal(t, group.tiles, expectedTiles)
+// 	})
+// 	t.Run("ShouldInsertAtStartOfGroup", func(t *testing.T) {
+// 		piece := NewPiece(1, ColorRed)
+// 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
+// 		err := group.Insert(piece, 0)
+// 		assert.NoError(t, err)
+// 		expectedTiles := []Piece{NewPiece(1, ColorRed), NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}
+// 		assert.Equal(t, group.tiles, expectedTiles)
+// 	})
+// 	t.Run("ShouldReturnErrorOnWrongValue", func(t *testing.T) {
+// 		piece := NewPiece(13, ColorRed)
+// 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}}
+// 		err := group.Insert(piece, 0)
+// 		assert.EqualError(t, err, "piece does not match the value of the group")
+// 	})
+// 	// run cases
+// 	t.Run("ShouldInsertAtEndOfRun", func(t *testing.T) {
+// 		piece := NewPiece(7, ColorRed)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, 3)
+// 		expectedTiles := []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed), NewPiece(7, ColorRed)}
+// 		assert.NoError(t, err)
+// 		assert.Equal(t, run.tiles, expectedTiles)
+// 	})
+// 	t.Run("ShouldReturnErrorOnMiddleInsert", func(t *testing.T) {
+// 		piece := NewPiece(5, ColorRed)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, 1)
+// 		assert.EqualError(t, err, "piece cannot be inserted into run")
+// 	})
+// 	t.Run("ShouldInsertAtStartOfRun", func(t *testing.T) {
+// 		piece := NewPiece(3, ColorRed)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, 0)
+// 		expectedTiles := []Piece{NewPiece(3, ColorRed), NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}
+// 		assert.NoError(t, err)
+// 		assert.Equal(t, run.tiles, expectedTiles)
+// 	})
+// 	t.Run("ShouldReturnErrorOnWrongColor", func(t *testing.T) {
+// 		piece := NewPiece(3, ColorBlack)
+// 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
+// 		err := run.Insert(piece, 0)
+// 		assert.EqualError(t, err, "piece does not match the color of the run")
+// 	})
+// }
 
 func TestRemove(t *testing.T) {
 	// invalid cases

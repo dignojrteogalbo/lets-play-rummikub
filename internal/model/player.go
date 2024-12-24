@@ -124,36 +124,36 @@ func playerCombine(player *player, game Game, options ...string) error {
 	return nil
 }
 
-func playerInsert(player *player, game Game, options ...string) error {
-	if len(options) < 3 {
-		return errors.New(InvalidParameters)
-	}
-	setIndex, err := strconv.ParseInt(options[0], 0, 16)
-	if err != nil {
-		return err
-	}
-	pieceIndex, err := strconv.ParseInt(options[1], 0, 16)
-	if err != nil {
-		return err
-	}
-	position, err := strconv.ParseInt(options[2], 0, 16)
-	if err != nil {
-		return err
-	}
-	piece := player.selectPieceFromRack(int(pieceIndex))
-	insertSet, err := game.BoardSet(int(setIndex))
-	if err != nil {
-		return err
-	}
-	err = insertSet.Insert(piece, int(position))
-	if err != nil {
-		return err
-	}
-	player.removePiece(piece)
-	fmt.Println("inserted into set")
-	game.PrintBoard()
-	return err
-}
+// func playerInsert(player *player, game Game, options ...string) error {
+// 	if len(options) < 3 {
+// 		return errors.New(InvalidParameters)
+// 	}
+// 	setIndex, err := strconv.ParseInt(options[0], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	pieceIndex, err := strconv.ParseInt(options[1], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	position, err := strconv.ParseInt(options[2], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	piece := player.selectPieceFromRack(int(pieceIndex))
+// 	insertSet, err := game.BoardSet(int(setIndex))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	err = insertSet.Insert(piece, int(position))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	player.removePiece(piece)
+// 	fmt.Println("inserted into set")
+// 	game.PrintBoard()
+// 	return err
+// }
 
 func playerRemove(player *player, game Game, options ...string) error {
 	setIndex, err := strconv.ParseInt(options[0], 0, 16)
@@ -232,12 +232,12 @@ func parseCommand(input []string, successfulMoves *uint16, player *player, game 
 		} else {
 			fmt.Println(err)
 		}
-	case "insert":
-		if err := playerInsert(player, game, options...); err == nil {
-			*successfulMoves++
-		} else {
-			fmt.Println(err)
-		}
+	// case "insert":
+	// 	if err := playerInsert(player, game, options...); err == nil {
+	// 		*successfulMoves++
+	// 	} else {
+	// 		fmt.Println(err)
+	// 	}
 	case "remove":
 		if err := playerRemove(player, game, options...); err == nil {
 			*successfulMoves++

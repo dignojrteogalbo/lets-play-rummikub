@@ -16,9 +16,10 @@ var (
 
 type (
 	Set interface {
-		Insert(p Piece, index int) error
+		// Insert(p Piece) error
 		Remove(index, position int, pn ...Piece) (Set, error)
 		Split(piece Piece) (Set, error)
+		Piece(index int) (Piece, error)
 		String() string
 	}
 
@@ -44,6 +45,16 @@ func (s *set) String() string {
 		}
 	}
 	return output
+}
+
+func (s *set) Piece(index int) (Piece, error) {
+	if len(s.tiles) == 0 {
+		return nil, errors.New(InvalidSet)
+	}
+	if index < 0 || index >= len(s.tiles) {
+		return nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
+	}
+	return s.tiles[index], nil
 }
 
 func isGroup(s *set) bool {
