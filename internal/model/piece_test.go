@@ -146,3 +146,11 @@ func TestValue(t *testing.T) {
 		assert.Zero(t, value)
 	})
 }
+
+func TestColor(t *testing.T) {
+	t.Run("ShouldReturnZeroOnInvalidPiece", func(t *testing.T) {
+		piece := &piece{value: 16, color: 5}
+		value := piece.Color()
+		assert.Zero(t, value)
+	})
+}

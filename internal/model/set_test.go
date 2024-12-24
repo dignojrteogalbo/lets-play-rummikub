@@ -26,6 +26,13 @@ func createGroupTiles(t *testing.T, length uint, value Value) []Piece {
 	return tiles
 }
 
+func TestString(t *testing.T) {
+	test := &set{tiles: createRunTiles(t, 1, 13, ColorBlack)}
+	test.tiles = append(test.tiles, NewPiece(ValueJoker, ColorBlack))
+	result := test.String()
+	assert.NotEmpty(t, result)
+}
+
 func TestIsValidSet(t *testing.T) {
 	t.Run("ShouldReturnFalseOnNil", func(t *testing.T) {
 		result := isValidSet(nil)
