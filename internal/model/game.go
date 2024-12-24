@@ -39,7 +39,7 @@ func (g *instance) createTiles() {
 	index := 0
 	for i := 0; i < 2; i++ {
 		for color := ColorBlack; color <= ColorGreen; color++ {
-			for value := uint8(1); value <= uint8(13); value++ {
+			for value := Value(1); value <= Value(13); value++ {
 				g.tiles[index] = NewPiece(value, color)
 				index++
 			}

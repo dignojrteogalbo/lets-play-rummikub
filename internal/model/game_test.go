@@ -8,7 +8,7 @@ import (
 
 func createColorTiles(color Color) []Piece {
 	tiles := make([]Piece, 0)
-	for value := uint8(1); value <= uint8(13); value++ {
+	for value := Value(1); value <= Value(13); value++ {
 		tiles = append(tiles, NewPiece(value, color))
 		tiles = append(tiles, NewPiece(value, color))
 	}

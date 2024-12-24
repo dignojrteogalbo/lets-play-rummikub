@@ -1,7 +1,7 @@
 package model
 
 const (
-	ValueJoker uint8 = iota
+	ValueJoker Value = iota
 	ColorBlack Color = iota
 	ColorBlue
 	ColorRed
@@ -17,16 +17,17 @@ type (
 		IsSameColor(Piece) bool
 		IsSameValue(Piece) bool
 		IsSamePiece(Piece) bool
-		Value() uint8
+		Value() Value
+		Color() Color
 	}
 
 	piece struct {
-		value uint8
-		Color
+		value Value
+		color Color
 	}
 )
 
-func NewPiece(v uint8, c Color) Piece {
+func NewPiece(v Value, c Color) Piece {
 	if v > 13 {
 		return nil
 	}
@@ -47,7 +48,7 @@ func isValidPiece(p Piece) bool {
 	if piece.value > 13 {
 		return false
 	}
-	if piece.Color > ColorGreen {
+	if piece.color > ColorGreen {
 		return false
 	}
 	return true
@@ -62,7 +63,7 @@ func (p *piece) IsJoker() bool {
 
 func (p *piece) IsSameColor(compare Piece) bool {
 	if isValidPiece(p) && isValidPiece(compare) {
-		return p.Color == compare.(*piece).Color
+		return p.color == compare.(*piece).color
 	}
 	return false
 }
@@ -78,9 +79,16 @@ func (p *piece) IsSamePiece(compare Piece) bool {
 	return p == compare.(*piece)
 }
 
-func (p *piece) Value() uint8 {
+func (p *piece) Value() Value {
 	if !isValidPiece(p) {
 		return 0
 	}
 	return p.value
+}
+
+func (p *piece) Color() Color {
+	if !isValidPiece(p) {
+		return 0
+	}
+	return p.color
 }

@@ -8,35 +8,35 @@ import (
 
 func TestNewPiece(t *testing.T) {
 	t.Run("ShouldReturnBlackJokerPiece", func(t *testing.T) {
-		newPiece := NewPiece(0, ColorBlack)
+		newPiece := NewPiece(Value(0), ColorBlack)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.value, uint8(0))
-			assert.Equal(t, result.Color, ColorBlack)
+			assert.Equal(t, result.value, Value(0))
+			assert.Equal(t, result.color, ColorBlack)
 		}
 	})
 	t.Run("ShouldReturnBlueOnePiece", func(t *testing.T) {
 		newPiece := NewPiece(1, ColorBlue)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.value, uint8(1))
-			assert.Equal(t, result.Color, ColorBlue)
+			assert.Equal(t, result.value, Value(1))
+			assert.Equal(t, result.color, ColorBlue)
 		}
 	})
 	t.Run("ShouldReturnRedThirteenPiece", func(t *testing.T) {
 		newPiece := NewPiece(13, ColorRed)
 		result, ok := newPiece.(*piece)
 		if assert.True(t, ok) {
-			assert.Equal(t, result.value, uint8(13))
-			assert.Equal(t, result.Color, ColorRed)
+			assert.Equal(t, result.value, Value(13))
+			assert.Equal(t, result.color, ColorRed)
 		}
 	})
 	t.Run("ShouldReturnNilOnInvalidValue", func(t *testing.T) {
-		newPiece := NewPiece(14, ColorRed)
+		newPiece := NewPiece(Value(14), ColorRed)
 		assert.Nil(t, newPiece)
 	})
 	t.Run("ShouldReturnNilOnInvalidColor", func(t *testing.T) {
-		newPiece := NewPiece(5, 14)
+		newPiece := NewPiece(Value(5), Color(14))
 		assert.Nil(t, newPiece)
 	})
 }
@@ -141,7 +141,7 @@ func TestIsSamePiece(t *testing.T) {
 
 func TestValue(t *testing.T) {
 	t.Run("ShouldReturnZeroOnInvalidPiece", func(t *testing.T) {
-		piece := &piece{value: 16, Color: 5}
+		piece := &piece{value: 16, color: 5}
 		value := piece.Value()
 		assert.Zero(t, value)
 	})

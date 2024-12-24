@@ -37,11 +37,10 @@ type (
 func (s *set) String() string {
 	var output string
 	for i, t := range s.tiles {
-		color := t.(*piece).Color
 		if t.IsJoker() {
 			output = output + fmt.Sprintf("[%d] (Joker)\n", i)
 		} else {
-			output = output + fmt.Sprintf("[%d] (\x1b[%dm%d\x1b[0m)\n", i, ansiColors[color], t.Value())
+			output = output + fmt.Sprintf("[%d] (\x1b[%dm%d\x1b[0m)\n", i, ansiColors[t.Color()], t.Value())
 		}
 	}
 	return output
@@ -52,7 +51,7 @@ func (s *set) Piece(index int) (Piece, error) {
 		return nil, errors.New(InvalidSet)
 	}
 	if index < 0 || index >= len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
+		return nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
 	}
 	return s.tiles[index], nil
 }
@@ -61,15 +60,27 @@ func (s *set) Piece(index int) (Piece, error) {
 
 func isGroup(s *set) bool {
 	startPiece := s.tiles[0]
+	colors := map[Color]bool {
+		ColorBlack: false,
+		ColorBlue: false,
+		ColorRed: false,
+		ColorGreen: false,
+	}
+	totalColors := 0
 	for _, piece := range s.tiles {
 		if piece.IsJoker() {
+			totalColors++
 			continue
 		}
 		if !startPiece.IsSameValue(piece) {
 			return false
 		}
+		if !colors[piece.Color()] {
+			colors[piece.Color()] = true
+			totalColors++
+		}
 	}
-	return true
+	return totalColors > 2
 }
 
 func isRun(s *set) bool {
@@ -140,7 +151,7 @@ func (s *set) insertIntoRun(piece Piece) error {
 		s.insertPiece(piece, len(s.tiles))
 		return nil
 	}
-	return errors.New(CannotInsertIntoRun)
+	return errors.New(CannotInsert)
 }
 
 func (s *set) Insert(piece Piece) error {
@@ -183,23 +194,33 @@ func (s *set) Remove(piece Piece) error {
 
 //region split set
 
+func (s *set) splitSet(piece Piece, index int) Set {
+	s.insertPiece(piece, index)
+	clone := s.cloneTiles()
+	s.tiles = clone[:index+1]
+	return &set{tiles: clone[index+1:]}
+}
+
 func (s *set) Split(piece Piece) (Set, error) {
-	if !isValidSet(s) || !isRun(s) {
-		return nil, errors.New(InvalidSet)
+	if !isRun(s) {
+		return nil, errors.New(CannotSplit)
 	}
-	if len(s.tiles)+1 < 6 {
+	if len(s.tiles) < 5 {
 		return nil, errors.New(TooFewPieces)
 	}
-	for index, p := range s.tiles {
-		minPieces := index > 1 && len(s.tiles)-index > 2
-		if minPieces && piece.IsSameValue(p) {
-			s.insertPiece(piece, index)
-			splitSet := &set{s.tiles[index+1:]}
-			s.tiles = s.tiles[:index+1]
-			return splitSet, nil
+	index := -1
+	for i, p := range s.tiles {
+		if piece.IsSameValue(p) && piece.IsSameColor(p) {
+			index = i
+			break
 		}
 	}
-	return nil, errors.New(CannotSplitRun)
+	if index < 0 {
+		return nil, errors.New(InvalidPiece)
+	} else if index < 2 || len(s.tiles)-index+1 < 3 {
+		return nil, errors.New(TooFewPieces)
+	}
+	return s.splitSet(piece, index), nil
 }
 
 //region combine set
