@@ -26,12 +26,6 @@ type (
 	set struct {
 		tiles []Piece
 	}
-
-	combineArguments struct {
-		fromSet   *set
-		atIndex   int
-		takePiece *piece
-	}
 )
 
 func (s *set) String() string {
@@ -59,11 +53,14 @@ func (s *set) Piece(index int) (Piece, error) {
 //region set validation
 
 func isGroup(s *set) bool {
+	if len(s.tiles) < 3 || len(s.tiles) > 4 {
+		return false
+	}
 	startPiece := s.tiles[0]
-	colors := map[Color]bool {
+	colors := map[Color]bool{
 		ColorBlack: false,
-		ColorBlue: false,
-		ColorRed: false,
+		ColorBlue:  false,
+		ColorRed:   false,
 		ColorGreen: false,
 	}
 	totalColors := 0
@@ -225,87 +222,13 @@ func (s *set) Split(piece Piece) (Set, error) {
 
 //region combine set
 
-func processCombineArguments(setsAndIndexesOrPieces ...any) ([]combineArguments, error) {
-	combination := make([]combineArguments, 0)
-	for len(setsAndIndexesOrPieces) > 0 {
-		if takePiece, ok := setsAndIndexesOrPieces[0].(*piece); ok {
-			combination = append(combination, combineArguments{nil, 0, takePiece})
-			setsAndIndexesOrPieces = setsAndIndexesOrPieces[1:]
-			continue
-		}
-		if len(setsAndIndexesOrPieces) < 2 {
-			return nil, errors.New(InvalidCombineArguments)
-		}
-		takeSet, ok := setsAndIndexesOrPieces[0].(*set)
-		if !ok {
-			return nil, errors.New(InvalidCombineArguments)
-		}
-		takePiece, ok := setsAndIndexesOrPieces[1].(int)
-		if !ok {
-			return nil, errors.New(InvalidCombineArguments)
-		}
-		combination = append(combination, combineArguments{takeSet, takePiece, nil})
-		setsAndIndexesOrPieces = setsAndIndexesOrPieces[2:]
-	}
-	if len(combination) < 3 {
+func Combine(pieces ...Piece) (Set, error) {
+	if len(pieces) < 3 {
 		return nil, errors.New(TooFewPieces)
 	}
-	return combination, nil
-}
-
-func isValidCombination(combination []combineArguments) (Set, bool) {
-	tiles := make([]Piece, 0)
-	for _, c := range combination {
-		if c.takePiece != nil {
-			tiles = append(tiles, c.takePiece)
-			continue
-		}
-		tiles = append(tiles, c.fromSet.tiles[c.atIndex])
-	}
-	newSet := &set{tiles}
-	if isValidSet(newSet) {
-		return newSet, true
-	}
-	return nil, false
-}
-
-func applyCombination(combination []combineArguments) error {
-	revert := make([][]Piece, 0)
-	for index, c := range combination {
-		if c.takePiece != nil {
-			continue
-		}
-		original := make([]Piece, len(c.fromSet.tiles))
-		copy(original, c.fromSet.tiles)
-		revert = append(revert, original)
-		c.fromSet.removePiece(c.atIndex)
-		if !isValidSet(c.fromSet) {
-			for len(revert) > 0 {
-				if combination[index].takePiece != nil {
-					index--
-					continue
-				}
-				combination[index].fromSet.tiles = revert[len(revert)-1]
-				revert = revert[:len(revert)-1]
-				index--
-			}
-			return errors.New(InvalidSet)
-		}
-	}
-	return nil
-}
-
-func Combine(setsAndIndexesOrPieces ...any) (Set, error) {
-	combination, err := processCombineArguments(setsAndIndexesOrPieces...)
-	if err != nil {
-		return nil, err
-	}
-	combineSet, valid := isValidCombination(combination)
-	if !valid {
+	combined := &set{tiles: pieces}
+	if !isValidSet(combined) {
 		return nil, errors.New(InvalidSet)
 	}
-	if err := applyCombination(combination); err != nil {
-		return nil, err
-	}
-	return combineSet, nil
+	return combined, nil
 }

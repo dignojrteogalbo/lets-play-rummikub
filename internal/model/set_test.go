@@ -236,60 +236,35 @@ func TestSplit(t *testing.T) {
 	})
 }
 
-// func TestCombine(t *testing.T) {
-// 	// bad input cases
-// 	t.Run("ShouldReturnErrorOnUnpairedArguments", func(t *testing.T) {
-// 		set := &set{tiles: createGroupTiles(t, 3, 7)}
-// 		combine, err := Combine(set)
-// 		assert.Nil(t, combine)
-// 		assert.EqualError(t, err, InvalidCombineArguments)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadArguments", func(t *testing.T) {
-// 		set := &set{tiles: createGroupTiles(t, 3, 7)}
-// 		combine, err := Combine(set, "hello world")
-// 		assert.Nil(t, combine)
-// 		assert.EqualError(t, err, InvalidCombineArguments)
-// 		combine, err = Combine("hello world", 1)
-// 		assert.Nil(t, combine)
-// 		assert.EqualError(t, err, InvalidCombineArguments)
-// 	})
-// 	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
-// 		set := &set{tiles: createGroupTiles(t, 3, 7)}
-// 		combine, err := Combine(set, 1)
-// 		assert.Nil(t, combine)
-// 		assert.EqualError(t, err, TooFewPieces)
-// 	})
-// 	// good input cases
-// 	t.Run("ShouldCombineSets", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 4, ColorBlack)}
-// 		group := &set{tiles: createGroupTiles(t, 4, 1)}
-// 		piece := NewPiece(1, ColorBlue)
-// 		combine, err := Combine(run, 0, group, 2, piece)
-// 		assert.NoError(t, err)
-// 		if assert.NotNil(t, combine) {
-// 			runTiles := createRunTiles(t, 2, 4, ColorBlack)
-// 			groupTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorBlue), NewPiece(1, ColorGreen)}
-// 			expectedTiles := []Piece{NewPiece(1, ColorBlack), NewPiece(1, ColorRed), NewPiece(1, ColorBlue)}
-// 			assert.Equal(t, run.tiles, runTiles)
-// 			assert.Equal(t, group.tiles, groupTiles)
-// 			assert.Equal(t, combine.(*set).tiles, expectedTiles)
-// 		}
-// 	})
-// 	t.Run("ShouldRevertOnBadCombination", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 4, ColorBlack)}
-// 		group := &set{tiles: createGroupTiles(t, 4, 1)}
-// 		revert := &set{tiles: createRunTiles(t, 1, 3, ColorBlue)}
-// 		combine, err := Combine(run, 0, group, 2, NewPiece(1, ColorGreen), revert, 0)
-// 		assert.EqualError(t, err, InvalidSet)
-// 		assert.Nil(t, combine)
-// 		assert.Equal(t, run.tiles, createRunTiles(t, 1, 4, ColorBlack))
-// 		assert.Equal(t, group.tiles, createGroupTiles(t, 4, 1))
-// 		assert.Equal(t, revert.tiles, createRunTiles(t, 1, 3, ColorBlue))
-// 	})
-// 	t.Run("ShouldReturnErrorOnInvalidCombination", func(t *testing.T) {
-// 		pieces := []any{NewPiece(1, ColorRed), NewPiece(2, ColorGreen), NewPiece(3, ColorRed)}
-// 		combine, err := Combine(pieces...)
-// 		assert.EqualError(t, err, InvalidSet)
-// 		assert.Nil(t, combine)
-// 	})
-// }
+func TestCombine(t *testing.T) {
+	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
+		pieces := []Piece{NewPiece(Value(2), ColorGreen), NewPiece(Value(2), ColorBlue)}
+		set, err := Combine(pieces...)
+		assert.EqualError(t, err, TooFewPieces)
+		assert.Nil(t, set)
+	})
+	t.Run("ShouldReturnErrorOnInvalidRun", func(t *testing.T) {
+		pieces := []Piece{NewPiece(Value(1), ColorGreen), NewPiece(Value(2), ColorGreen), NewPiece(Value(4), ColorGreen)}
+		invalidRun, err := Combine(pieces...)
+		assert.EqualError(t, err, InvalidSet)
+		assert.Nil(t, invalidRun)
+	})
+	t.Run("ShouldReturnErrorOnInvalidGroup", func(t *testing.T) {
+		pieces := []Piece{NewPiece(Value(7), ColorGreen), NewPiece(Value(7), ColorBlue), NewPiece(Value(7), ColorGreen)}
+		invalidRun, err := Combine(pieces...)
+		assert.EqualError(t, err, InvalidSet)
+		assert.Nil(t, invalidRun)
+	})
+	t.Run("ShouldReturnRun", func(t *testing.T) {
+		pieces := createRunTiles(t, 7, 13, ColorRed)
+		run, err := Combine(pieces...)
+		assert.NoError(t, err)
+		assert.NotNil(t, run)
+	})
+	t.Run("ShouldReturnGroup", func(t *testing.T) {
+		pieces := createGroupTiles(t, 4, Value(11))
+		group, err := Combine(pieces...)
+		assert.NoError(t, err)
+		assert.NotNil(t, group)
+	})
+}
