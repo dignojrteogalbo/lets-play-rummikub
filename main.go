@@ -3,11 +3,16 @@ package main
 import (
 	"fmt"
 	"lets-play-rummikub/internal/model"
-	"lets-play-rummikub/internal/server"
 )
 
 func main() {
-	server := &server.Server{Message: "Hello world!\n"}
-	fmt.Printf(server.Message)
-	model.NewGame()
+	totalPlayers := 5
+	game := model.NewGame(uint(totalPlayers))
+	fmt.Printf("Started game with %d players\n", totalPlayers)
+	game.Shuffle()
+	fmt.Println("Shuffling tiles...")
+	game.DealPieces()
+	fmt.Println("Dealing tiles to players...")
+	fmt.Println("Start game!")
+	game.Start()
 }

@@ -6,6 +6,7 @@ const (
 	InvalidSet              = string("set is invalid")
 	InvalidPiece            = string("piece is invalid")
 	InvalidCombineArguments = string("combine arguments must be pairs of type Set and int")
+	InvalidParameters       = string("invalid command parameters, try \"help me\"")
 	TooFewPieces            = string("not enough pieces to create set")
 	CannotInsertIntoRun     = string("piece cannot be inserted into run")
 	CannotSplitRun          = string("cannot split run")

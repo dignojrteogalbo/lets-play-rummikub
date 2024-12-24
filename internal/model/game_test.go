@@ -22,10 +22,41 @@ func TestNewGame(t *testing.T) {
 	expectedTiles = append(expectedTiles, createColorTiles(ColorBlue)...)
 	expectedTiles = append(expectedTiles, createColorTiles(ColorRed)...)
 	expectedTiles = append(expectedTiles, createColorTiles(ColorGreen)...)
-	game := NewGame()
-	if assert.NotNil(t, game) {
-		gameStruct, ok := game.(*gameInstance)
-		assert.True(t, ok)
-		assert.ElementsMatch(t, gameStruct.tiles, expectedTiles)
+	t.Run("ShouldCreateNewGame", func(t *testing.T) {
+		game := NewGame(1)
+		if assert.NotNil(t, game) {
+			gameStruct, ok := game.(*instance)
+			assert.True(t, ok)
+			assert.ElementsMatch(t, gameStruct.tiles, expectedTiles)
+		}
+	})
+	t.Run("ShouldReturnNilOnTooFewPlayers", func(t *testing.T) {
+		game := NewGame(0)
+		assert.Nil(t, game)
+	})
+}
+
+func TestShuffle(t *testing.T) {
+	game := NewGame(1)
+	sortedTiles := make([]Piece, 0)
+	sortedTiles = append(sortedTiles, NewPiece(ValueJoker, ColorBlack), NewPiece(ValueJoker, ColorBlack))
+	sortedTiles = append(sortedTiles, createColorTiles(ColorBlack)...)
+	sortedTiles = append(sortedTiles, createColorTiles(ColorBlue)...)
+	sortedTiles = append(sortedTiles, createColorTiles(ColorRed)...)
+	sortedTiles = append(sortedTiles, createColorTiles(ColorGreen)...)
+	game.Shuffle()
+	shuffledTiles := game.(*instance).tiles
+	assert.ElementsMatch(t, shuffledTiles, sortedTiles)
+	assert.NotEqual(t, shuffledTiles, sortedTiles)
+}
+
+func TestDealPieces(t *testing.T) {
+	game := NewGame(2)
+	game.DealPieces()
+	players := game.(*instance).players
+	tiles := game.(*instance).tiles
+	assert.Len(t, tiles, 106-28)
+	for _, p := range players {
+		assert.Len(t, p.(*player).rack, 14)
 	}
 }

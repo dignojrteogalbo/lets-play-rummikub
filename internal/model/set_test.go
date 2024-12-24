@@ -173,11 +173,11 @@ func TestRemove(t *testing.T) {
 		assert.EqualError(t, err, TooFewPieces)
 	})
 	t.Run("ShouldReturnErrorOnIndexOutOfBounds", func(t *testing.T) {
-		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
+		group := &set{tiles: createGroupTiles(t, 4, 4)}
 		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
 		set, err := group.Remove(4, 1, rack...)
 		assert.Nil(t, set)
-		assert.EqualError(t, err, IndexOutOfBounds(4))
+		assert.EqualError(t, err, IndexOutOfBounds(3))
 	})
 	t.Run("ShouldReturnErrorOnPostiionOutOfBounds", func(t *testing.T) {
 		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
@@ -239,9 +239,17 @@ func TestSplit(t *testing.T) {
 		assert.EqualError(t, err, TooFewPieces)
 		assert.Equal(t, run.tiles, createRunTiles(t, 1, 3, ColorGreen))
 	})
-	t.Run("ShouldReturnErrorOnInvalidSplit", func(t *testing.T) {
+	t.Run("ShouldReturnErrorOnLateSplit", func(t *testing.T) {
 		run := &set{tiles: createRunTiles(t, 1, 5, ColorGreen)}
-		piece := NewPiece(7, ColorGreen)
+		piece := NewPiece(4, ColorGreen)
+		split, err := run.Split(piece)
+		assert.Nil(t, split)
+		assert.EqualError(t, err, CannotSplitRun)
+		assert.Equal(t, run.tiles, createRunTiles(t, 1, 5, ColorGreen))
+	})
+	t.Run("ShouldReturnErrorOnEarlySplit", func(t *testing.T) {
+		run := &set{tiles: createRunTiles(t, 1, 5, ColorGreen)}
+		piece := NewPiece(2, ColorGreen)
 		split, err := run.Split(piece)
 		assert.Nil(t, split)
 		assert.EqualError(t, err, CannotSplitRun)

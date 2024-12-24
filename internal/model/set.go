@@ -2,14 +2,26 @@ package model
 
 import (
 	"errors"
+	"fmt"
+)
+
+var (
+	ansiColors = map[Color]int{
+		ColorBlack: 37,
+		ColorBlue:  35,
+		ColorRed:   31,
+		ColorGreen: 32,
+	}
 )
 
 type (
 	Set interface {
 		Insert(p Piece, index int) error
 		Remove(index, position int, pn ...Piece) (Set, error)
+		Split(piece Piece) (Set, error)
 		IsGroup() bool
 		IsRun() bool
+		String() string
 	}
 
 	set struct {
@@ -22,6 +34,19 @@ type (
 		takePiece *piece
 	}
 )
+
+func (s *set) String() string {
+	var output string
+	for i, t := range s.tiles {
+		color := t.(*piece).Color
+		if t.IsJoker() {
+			output = output + fmt.Sprintf("[%d] (Joker)\n", i)
+		} else {
+			output = output + fmt.Sprintf("[%d] (\x1b[%dm%d\x1b[0m)\n", i, ansiColors[color], t.Value())
+		}
+	}
+	return output
+}
 
 func (s *set) IsGroup() bool {
 	startPiece := s.tiles[0]
@@ -115,22 +140,29 @@ func (s *set) removePiece(index int) {
 	s.tiles = append(s.tiles[:index], s.tiles[index+1:]...)
 }
 
+func (s *set) cloneTiles() []Piece {
+	clone := make([]Piece, len(s.tiles))
+	copy(clone, s.tiles)
+	return clone
+}
+
 func (s *set) Remove(index, position int, pn ...Piece) (Set, error) {
 	if len(s.tiles) < 4 || len(pn)+1 < 3 {
 		return nil, errors.New(TooFewPieces)
 	}
-	if index < 0 || index >= len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(len(s.tiles)))
+	if index < 0 || index > len(s.tiles)-1 {
+		return nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
 	}
-	if position < 0 || position >= len(pn) {
+	if position < 0 || position > len(pn) {
 		return nil, errors.New(IndexOutOfBounds(len(pn), "position"))
 	}
-	piece, newSet := s.tiles[index], &set{pn}
+	piece, newSet, original := s.tiles[index], &set{pn}, s.cloneTiles()
 	newSet.insertPiece(piece, position)
-	if !isValidSet(newSet) {
+	s.removePiece(index)
+	if !isValidSet(newSet) || !isValidSet(s) {
+		s.tiles = original
 		return nil, errors.New(InvalidSet)
 	}
-	s.removePiece(index)
 	return newSet, nil
 }
 
@@ -142,7 +174,8 @@ func (s *set) Split(piece Piece) (Set, error) {
 		return nil, errors.New(TooFewPieces)
 	}
 	for index, p := range s.tiles {
-		if index > 1 && piece.IsSameValue(p) {
+		minPieces := index > 1 && len(s.tiles)-index > 2
+		if minPieces && piece.IsSameValue(p) {
 			s.insertPiece(piece, index)
 			splitSet := &set{s.tiles[index+1:]}
 			s.tiles = s.tiles[:index+1]
