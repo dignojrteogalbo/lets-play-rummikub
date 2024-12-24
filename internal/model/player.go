@@ -155,41 +155,41 @@ func playerCombine(player *player, game Game, options ...string) error {
 // 	return err
 // }
 
-func playerRemove(player *player, game Game, options ...string) error {
-	setIndex, err := strconv.ParseInt(options[0], 0, 16)
-	if err != nil {
-		return err
-	}
-	pieceIndex, err := strconv.ParseInt(options[1], 0, 16)
-	if err != nil {
-		return err
-	}
-	position, err := strconv.ParseInt(options[2], 0, 16)
-	if err != nil {
-		return err
-	}
-	pieces := make([]Piece, 0)
-	for _, o := range options[3:] {
-		index, err := strconv.ParseInt(o, 0, 16)
-		if err != nil {
-			return err
-		}
-		pieces = append(pieces, player.selectPieceFromRack(int(index)))
-	}
-	removeSet, err := game.BoardSet(int(setIndex))
-	if err != nil {
-		return err
-	}
-	set, err := removeSet.Remove(int(pieceIndex), int(position), pieces...)
-	if err != nil {
-		return err
-	}
-	game.AddSet(set)
-	player.removePiece(pieces...)
-	fmt.Println("removed from set")
-	game.PrintBoard()
-	return nil
-}
+// func playerRemove(player *player, game Game, options ...string) error {
+// 	setIndex, err := strconv.ParseInt(options[0], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	pieceIndex, err := strconv.ParseInt(options[1], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	position, err := strconv.ParseInt(options[2], 0, 16)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	pieces := make([]Piece, 0)
+// 	for _, o := range options[3:] {
+// 		index, err := strconv.ParseInt(o, 0, 16)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		pieces = append(pieces, player.selectPieceFromRack(int(index)))
+// 	}
+// 	removeSet, err := game.BoardSet(int(setIndex))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	set, err := removeSet.Remove(int(pieceIndex), int(position), pieces...)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	game.AddSet(set)
+// 	player.removePiece(pieces...)
+// 	fmt.Println("removed from set")
+// 	game.PrintBoard()
+// 	return nil
+// }
 
 func playerSplit(player *player, game Game, options ...string) error {
 	if len(options) < 2 {
@@ -238,12 +238,12 @@ func parseCommand(input []string, successfulMoves *uint16, player *player, game 
 	// 	} else {
 	// 		fmt.Println(err)
 	// 	}
-	case "remove":
-		if err := playerRemove(player, game, options...); err == nil {
-			*successfulMoves++
-		} else {
-			fmt.Println(err)
-		}
+	// case "remove":
+	// 	if err := playerRemove(player, game, options...); err == nil {
+	// 		*successfulMoves++
+	// 	} else {
+	// 		fmt.Println(err)
+	// 	}
 	case "split":
 		if err := playerSplit(player, game, options...); err == nil {
 			*successfulMoves++

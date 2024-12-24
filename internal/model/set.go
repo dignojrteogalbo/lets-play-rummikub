@@ -16,9 +16,9 @@ var (
 
 type (
 	Set interface {
-		// Insert(p Piece) error
-		Remove(index, position int, pn ...Piece) (Set, error)
-		Split(piece Piece) (Set, error)
+		Insert(p Piece) error
+		Remove(p Piece) error
+		Split(p Piece) (Set, error)
 		Piece(index int) (Piece, error)
 		String() string
 	}
@@ -57,6 +57,8 @@ func (s *set) Piece(index int) (Piece, error) {
 	return s.tiles[index], nil
 }
 
+//region set validation
+
 func isGroup(s *set) bool {
 	startPiece := s.tiles[0]
 	for _, piece := range s.tiles {
@@ -88,6 +90,15 @@ func isRun(s *set) bool {
 	return true
 }
 
+func isValidSet(s *set) bool {
+	if s == nil || len(s.tiles) < 3 {
+		return false
+	}
+	return isGroup(s) || isRun(s)
+}
+
+//region set manipulation
+
 func (s *set) insertPiece(piece Piece, index int) {
 	if index == len(s.tiles) {
 		s.tiles = append(s.tiles, piece)
@@ -96,6 +107,18 @@ func (s *set) insertPiece(piece Piece, index int) {
 		s.tiles[index] = piece
 	}
 }
+
+func (s *set) removePiece(index int) {
+	s.tiles = append(s.tiles[:index], s.tiles[index+1:]...)
+}
+
+func (s *set) cloneTiles() []Piece {
+	clone := make([]Piece, len(s.tiles))
+	copy(clone, s.tiles)
+	return clone
+}
+
+//region insert set
 
 func (s *set) insertIntoGroup(piece Piece) error {
 	if !piece.IsSameValue(s.tiles[0]) {
@@ -132,42 +155,33 @@ func (s *set) Insert(piece Piece) error {
 	return errors.New(InvalidSet)
 }
 
-func isValidSet(s *set) bool {
-	if s == nil || len(s.tiles) < 3 {
-		return false
+//region remove set
+
+func (s *set) Remove(piece Piece) error {
+	if len(s.tiles) <= 3 {
+		return errors.New(TooFewPieces)
 	}
-	return isGroup(s) || isRun(s)
+	clone := s.cloneTiles()
+	index := -1
+	for i, p := range s.tiles {
+		if piece.IsSamePiece(p) {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return errors.New(InvalidPiece)
+	}
+	remove := &set{tiles: clone}
+	remove.removePiece(index)
+	if !isValidSet(remove) {
+		return errors.New(InvalidSet)
+	}
+	s.tiles = remove.tiles
+	return nil
 }
 
-func (s *set) removePiece(index int) {
-	s.tiles = append(s.tiles[:index], s.tiles[index+1:]...)
-}
-
-func (s *set) cloneTiles() []Piece {
-	clone := make([]Piece, len(s.tiles))
-	copy(clone, s.tiles)
-	return clone
-}
-
-func (s *set) Remove(index, position int, pn ...Piece) (Set, error) {
-	if len(s.tiles) < 4 || len(pn)+1 < 3 {
-		return nil, errors.New(TooFewPieces)
-	}
-	if index < 0 || index > len(s.tiles)-1 {
-		return nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
-	}
-	if position < 0 || position > len(pn) {
-		return nil, errors.New(IndexOutOfBounds(len(pn), "position"))
-	}
-	piece, newSet, original := s.tiles[index], &set{pn}, s.cloneTiles()
-	newSet.insertPiece(piece, position)
-	s.removePiece(index)
-	if !isValidSet(newSet) || !isValidSet(s) {
-		s.tiles = original
-		return nil, errors.New(InvalidSet)
-	}
-	return newSet, nil
-}
+//region split set
 
 func (s *set) Split(piece Piece) (Set, error) {
 	if !isValidSet(s) || !isRun(s) {
@@ -187,6 +201,8 @@ func (s *set) Split(piece Piece) (Set, error) {
 	}
 	return nil, errors.New(CannotSplitRun)
 }
+
+//region combine set
 
 func processCombineArguments(setsAndIndexesOrPieces ...any) ([]combineArguments, error) {
 	combination := make([]combineArguments, 0)

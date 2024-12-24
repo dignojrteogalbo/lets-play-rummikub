@@ -165,68 +165,33 @@ func TestInsert(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	// invalid cases
-	t.Run("ShouldReturnErrorOnSetOfSize3", func(t *testing.T) {
-		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed)}}
-		rack := []Piece{NewPiece(5, ColorBlue), NewPiece(6, ColorBlue)}
-		set, err := group.Remove(0, 1, rack...)
-		assert.Nil(t, set)
-		assert.EqualError(t, err, TooFewPieces)
-	})
 	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
-		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-		rack := []Piece{NewPiece(5, ColorBlue)}
-		set, err := group.Remove(0, 1, rack...)
-		assert.Nil(t, set)
+		group := &set{tiles: createGroupTiles(t, uint(3), uint8(4))}
+		piece, err := group.Piece(0)
+		assert.NoError(t, err)
+		err = group.Remove(piece)
 		assert.EqualError(t, err, TooFewPieces)
 	})
-	t.Run("ShouldReturnErrorOnIndexOutOfBounds", func(t *testing.T) {
-		group := &set{tiles: createGroupTiles(t, 4, 4)}
-		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
-		set, err := group.Remove(4, 1, rack...)
-		assert.Nil(t, set)
-		assert.EqualError(t, err, IndexOutOfBounds(3))
-	})
-	t.Run("ShouldReturnErrorOnPostiionOutOfBounds", func(t *testing.T) {
+	t.Run("ShouldReturnErrorOnPieceNotInSet", func(t *testing.T) {
 		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
-		set, err := group.Remove(0, -1, rack...)
-		assert.Nil(t, set)
-		assert.EqualError(t, err, IndexOutOfBounds(2, "position"))
+		piece := NewPiece(4, ColorGreen)
+		err := group.Remove(piece)
+		assert.EqualError(t, err, InvalidPiece)
+	})
+	t.Run("ShouldRemoveFromGroup", func(t *testing.T) {
+		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
+		piece, err := group.Piece(2)
+		assert.NoError(t, err)
+		err = group.Remove(piece)
+		assert.NoError(t, err)
+		assert.NotContains(t, group.tiles, piece)
 	})
 	t.Run("ShouldReturnErrorOnInvalidSet", func(t *testing.T) {
-		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
-		set, err := group.Remove(0, 0, rack...)
-		assert.Nil(t, set)
+		run := &set{tiles: createRunTiles(t, 4, 8, ColorRed)}
+		piece, err := run.Piece(2)
+		assert.NoError(t, err)
+		err = run.Remove(piece)
 		assert.EqualError(t, err, InvalidSet)
-	})
-	// create new set cases
-	t.Run("ShouldCreateRunFromGroup", func(t *testing.T) {
-		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
-		run, err := group.Remove(0, 1, rack...)
-		assert.NoError(t, err)
-		if assert.True(t, isValidSet(run.(*set))) {
-			runTiles := run.(*set).tiles
-			expectedTiles := []Piece{NewPiece(3, ColorBlue), NewPiece(4, ColorBlue), NewPiece(5, ColorBlue)}
-			removedTiles := []Piece{NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}
-			assert.Equal(t, runTiles, expectedTiles)
-			assert.Equal(t, group.tiles, removedTiles)
-		}
-	})
-	t.Run("ShouldCreateGroupFromRun", func(t *testing.T) {
-		run := &set{tiles: []Piece{NewPiece(3, ColorBlue), NewPiece(4, ColorBlue), NewPiece(5, ColorBlue), NewPiece(6, ColorBlue)}}
-		rack := []Piece{NewPiece(6, ColorBlack), NewPiece(6, ColorGreen)}
-		group, err := run.Remove(3, 0, rack...)
-		assert.NoError(t, err)
-		if assert.True(t, isValidSet(group.(*set))) {
-			groupTiles := group.(*set).tiles
-			expectedTiles := []Piece{NewPiece(6, ColorBlue), NewPiece(6, ColorBlack), NewPiece(6, ColorGreen)}
-			removedTiles := []Piece{NewPiece(3, ColorBlue), NewPiece(4, ColorBlue), NewPiece(5, ColorBlue)}
-			assert.Equal(t, groupTiles, expectedTiles)
-			assert.Equal(t, run.tiles, removedTiles)
-		}
 	})
 }
 

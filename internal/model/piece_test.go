@@ -124,6 +124,21 @@ func TestIsSameValue(t *testing.T) {
 	})
 }
 
+func TestIsSamePiece(t *testing.T) {
+	t.Run("ShouldReturnTrueOnSamePiece", func(t *testing.T) {
+		piece := NewPiece(1, ColorBlack)
+		duplicate := piece
+		result := piece.IsSamePiece(duplicate)
+		assert.True(t, result)
+	})
+	t.Run("ShouldReturnFalseOnDifferentPiece", func(t *testing.T) {
+		piece := NewPiece(1, ColorBlack)
+		differentPiece := NewPiece(1, ColorBlack)
+		result := piece.IsSamePiece(differentPiece)
+		assert.False(t, result)
+	})
+}
+
 func TestValue(t *testing.T) {
 	t.Run("ShouldReturnZeroOnInvalidPiece", func(t *testing.T) {
 		piece := &piece{value: 16, Color: 5}

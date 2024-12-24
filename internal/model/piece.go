@@ -16,6 +16,7 @@ type (
 		IsJoker() bool
 		IsSameColor(Piece) bool
 		IsSameValue(Piece) bool
+		IsSamePiece(Piece) bool
 		Value() uint8
 	}
 
@@ -71,6 +72,10 @@ func (p *piece) IsSameValue(compare Piece) bool {
 		return p.value == compare.(*piece).value
 	}
 	return false
+}
+
+func (p *piece) IsSamePiece(compare Piece) bool {
+	return p == compare.(*piece)
 }
 
 func (p *piece) Value() uint8 {
