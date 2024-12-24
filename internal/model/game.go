@@ -17,7 +17,7 @@ type (
 	Game interface {
 		Shuffle()
 		DealPieces()
-		BoardSet(index int) (Set, error)
+		Set(index int) (Set, error)
 		AddSet(Set)
 		NextTurn()
 		IsGameOver() bool
@@ -89,9 +89,9 @@ func (g *instance) DealPieces() {
 	}
 }
 
-func (g *instance) BoardSet(index int) (Set, error) {
-	if index < 0 || index >= len(g.sets) {
-		return nil, errors.New(IndexOutOfBounds(len(g.sets)))
+func (g *instance) Set(index int) (Set, error) {
+	if index < 0 || index > len(g.sets) {
+		return nil, errors.New(IndexOutOfBounds(len(g.sets)-1, "set"))
 	}
 	return g.sets[index], nil
 }

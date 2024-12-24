@@ -33,6 +33,13 @@ func TestString(t *testing.T) {
 	assert.NotEmpty(t, result)
 }
 
+func TestClone(t *testing.T) {
+	original := &set{tiles: createRunTiles(t, 1, 13, ColorRed)}
+	clone := original.Clone()
+	assert.Equal(t, original, clone)
+	assert.NotSame(t, original, clone.(*set))
+}
+
 func TestIsValidSet(t *testing.T) {
 	t.Run("ShouldReturnFalseOnNil", func(t *testing.T) {
 		result := isValidSet(nil)

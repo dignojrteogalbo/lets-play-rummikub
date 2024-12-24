@@ -19,8 +19,9 @@ type (
 		Insert(p Piece) error
 		Remove(p Piece) error
 		Split(p Piece) (Set, error)
-		Piece(index int) (Piece, error)
 		String() string
+		Piece(index int) (Piece, error)
+		Clone() Set
 	}
 
 	set struct {
@@ -48,6 +49,10 @@ func (s *set) Piece(index int) (Piece, error) {
 		return nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
 	}
 	return s.tiles[index], nil
+}
+
+func (s *set) Clone() Set {
+	return &set{tiles: s.cloneTiles()}
 }
 
 //region set validation
