@@ -36,17 +36,17 @@ func TestIsValidSet(t *testing.T) {
 func TestIsGroup(t *testing.T) {
 	t.Run("ShouldReturnTrueOnGroup", func(t *testing.T) {
 		group := &set{tiles: createGroupTiles(t, 3, 1)}
-		result := group.IsGroup()
+		result := isGroup(group)
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnTrueOnGroupWithJoker", func(t *testing.T) {
 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(ValueJoker, ColorBlack), NewPiece(1, ColorGreen)}}
-		result := group.IsGroup()
+		result := isGroup(group)
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnFalseOnWrongColor", func(t *testing.T) {
 		notGroup := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(7, ColorBlack), NewPiece(3, ColorGreen)}}
-		result := notGroup.IsGroup()
+		result := isGroup(notGroup)
 		assert.False(t, result)
 	})
 }
@@ -54,22 +54,22 @@ func TestIsGroup(t *testing.T) {
 func TestIsRun(t *testing.T) {
 	t.Run("ShouldReturnTrueOnRun", func(t *testing.T) {
 		run := &set{tiles: createRunTiles(t, 4, 6, ColorRed)}
-		result := run.IsRun()
+		result := isRun(run)
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnTrueOnRunWithJoker", func(t *testing.T) {
 		run := &set{tiles: []Piece{NewPiece(4, ColorRed), NewPiece(5, ColorRed), NewPiece(6, ColorRed)}}
-		result := run.IsRun()
+		result := isRun(run)
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnFalseOnNotSorted", func(t *testing.T) {
 		notRun := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(2, ColorBlack), NewPiece(4, ColorBlack)}}
-		result := notRun.IsRun()
+		result := isRun(notRun)
 		assert.False(t, result)
 	})
 	t.Run("ShouldReturnFalseOnWrongColor", func(t *testing.T) {
 		notRun := &set{tiles: []Piece{NewPiece(1, ColorRed), NewPiece(2, ColorBlack), NewPiece(3, ColorBlack)}}
-		result := notRun.IsRun()
+		result := isRun(notRun)
 		assert.False(t, result)
 	})
 }
@@ -199,7 +199,7 @@ func TestRemove(t *testing.T) {
 		rack := []Piece{NewPiece(3, ColorBlue), NewPiece(5, ColorBlue)}
 		run, err := group.Remove(0, 1, rack...)
 		assert.NoError(t, err)
-		if assert.True(t, isValidSet(run)) {
+		if assert.True(t, isValidSet(run.(*set))) {
 			runTiles := run.(*set).tiles
 			expectedTiles := []Piece{NewPiece(3, ColorBlue), NewPiece(4, ColorBlue), NewPiece(5, ColorBlue)}
 			removedTiles := []Piece{NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}
@@ -212,7 +212,7 @@ func TestRemove(t *testing.T) {
 		rack := []Piece{NewPiece(6, ColorBlack), NewPiece(6, ColorGreen)}
 		group, err := run.Remove(3, 0, rack...)
 		assert.NoError(t, err)
-		if assert.True(t, isValidSet(group)) {
+		if assert.True(t, isValidSet(group.(*set))) {
 			groupTiles := group.(*set).tiles
 			expectedTiles := []Piece{NewPiece(6, ColorBlue), NewPiece(6, ColorBlack), NewPiece(6, ColorGreen)}
 			removedTiles := []Piece{NewPiece(3, ColorBlue), NewPiece(4, ColorBlue), NewPiece(5, ColorBlue)}

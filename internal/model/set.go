@@ -19,8 +19,6 @@ type (
 		Insert(p Piece, index int) error
 		Remove(index, position int, pn ...Piece) (Set, error)
 		Split(piece Piece) (Set, error)
-		IsGroup() bool
-		IsRun() bool
 		String() string
 	}
 
@@ -48,7 +46,7 @@ func (s *set) String() string {
 	return output
 }
 
-func (s *set) IsGroup() bool {
+func isGroup(s *set) bool {
 	startPiece := s.tiles[0]
 	for _, piece := range s.tiles {
 		if piece.IsJoker() {
@@ -61,7 +59,7 @@ func (s *set) IsGroup() bool {
 	return true
 }
 
-func (s *set) IsRun() bool {
+func isRun(s *set) bool {
 	startPiece := s.tiles[0]
 	var previous, current Piece
 	for _, piece := range s.tiles {
@@ -117,23 +115,20 @@ func (s *set) Insert(piece Piece, index int) error {
 	if index < 0 || index > len(s.tiles) {
 		return errors.New(IndexOutOfBounds(len(s.tiles)))
 	}
-	if s.IsGroup() {
+	if isGroup(s) {
 		return s.insertIntoGroup(piece, index)
 	}
-	if s.IsRun() {
+	if isRun(s) {
 		return s.insertIntoRun(piece, index)
 	}
 	return errors.New(InvalidSet)
 }
 
-func isValidSet(s Set) bool {
-	if s == nil {
+func isValidSet(s *set) bool {
+	if s == nil || len(s.tiles) < 3 {
 		return false
 	}
-	if set, ok := s.(*set); !ok || len(set.tiles) < 3 {
-		return false
-	}
-	return s.IsGroup() || s.IsRun()
+	return isGroup(s) || isRun(s)
 }
 
 func (s *set) removePiece(index int) {
@@ -167,7 +162,7 @@ func (s *set) Remove(index, position int, pn ...Piece) (Set, error) {
 }
 
 func (s *set) Split(piece Piece) (Set, error) {
-	if !isValidSet(s) || !s.IsRun() {
+	if !isValidSet(s) || !isRun(s) {
 		return nil, errors.New(InvalidSet)
 	}
 	if len(s.tiles)+1 < 6 {
