@@ -171,6 +171,24 @@ func (player *player) combine(game Game) error {
 	return nil
 }
 
+func (player *player) split(game Game) error {
+	set, err := player.promptForSet(game)
+	if err != nil {
+		return err
+	}
+	piece, err := player.promptForPiece(nil)
+	if err != nil {
+		return err
+	}
+	splitSet, err := set.Split(piece)
+	if err != nil {
+		return err
+	}
+	game.AddSet(splitSet)
+	player.removePiece(piece)
+	return nil
+}
+
 func parseCommand(input string, successfulMoves *uint16, player *player, game Game) {
 	switch input {
 	case "combine":
@@ -186,11 +204,15 @@ func parseCommand(input string, successfulMoves *uint16, player *player, game Ga
 			*successfulMoves++
 		}
 	case "split":
-
+		if err := player.split(game); err != nil {
+			fmt.Println(err)
+		} else {
+			*successfulMoves++
+		}
 	case "help":
 		fmt.Println("combine <r#|s#,#> <r#|s#,#> ... <r#|s#,#>")
 		fmt.Println("insert <set> <piece>")
-		fmt.Println("split <piece> <set>")
+		fmt.Println("split <set> <piece>")
 	default:
 		fmt.Println("invalid command")
 	}
@@ -205,7 +227,7 @@ func parseInt(input string) (int, error) {
 }
 
 func (p *player) Piece(index int) (Piece, error) {
-	if index < 0 || index > len(p.rack) {
+	if index < 0 || index >= len(p.rack) {
 		return nil, errors.New(IndexOutOfBounds(len(p.rack)-1, "piece"))
 	}
 	return p.rack[index], nil

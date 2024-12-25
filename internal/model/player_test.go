@@ -20,6 +20,19 @@ func TestTotalMoves(t *testing.T) {
 	assert.Equal(t, player.TotalMoves(), uint16(73))
 }
 
+func TestDealPiece(t *testing.T) {
+	t.Run("ShouldAddPieceToRack", func(t *testing.T) {
+		player := new(player)
+		player.DealPiece(NewPiece(Value(1), ColorBlue))
+		assert.Len(t, player.rack, 1)
+	})
+	t.Run("ShouldDoNothing", func(t *testing.T) {
+		player := new(player)
+		player.DealPiece(nil)
+		assert.Empty(t, player.rack)
+	})
+}
+
 func TestParseInt(t *testing.T) {
 	t.Run("ShouldReturnInt", func(t *testing.T) {
 		result, err := parseInt("2")
@@ -233,6 +246,27 @@ func TestStartTurn(t *testing.T) {
 		assert.Empty(t, player.rack)
 		assert.Len(t, game.sets, 1)
 	})
+	t.Run("ShouldNotAddPieceToRackOnSplit", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(6), ColorBlack)}}
+		run := &set{tiles: createRunTiles(t, 4, 8, ColorBlack)}
+		game := &instance{sets: []Set{run}}
+		readFromStringInput(t, "split\n0\n0\ndone\n")
+		player.StartTurn(game)
+		assert.Equal(t, player.TotalMoves(), uint16(1))
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.sets, 2)
+	})
+	t.Run("ShouldAddPieceToRackOnFailedMoves", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(1), ColorBlue)}}
+		group := &set{tiles: createGroupTiles(t, 4, Value(1))}
+		game := &instance{sets: []Set{group}}
+		readFromStringInput(t, "insert\n0\n0\ncombine\nr0\ndone\nsplit\n0\n0\ndone\n")
+		player.StartTurn(game)
+		assert.Equal(t, player.TotalMoves(), uint16(0))
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, game.sets, 1)
+		assert.Len(t, group.tiles, 4)
+	})
 }
 
 func TestPlayerInsert(t *testing.T) {
@@ -329,5 +363,49 @@ func TestPlayerCombine(t *testing.T) {
 		readerError(t)
 		err := player.combine(game)
 		assert.Error(t, err)
+	})
+}
+
+func TestPlayerSplit(t *testing.T) {
+	t.Run("ShouldSplitRun", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(4), ColorBlack)}}
+		run := &set{tiles: createRunTiles(t, 1, 6, ColorBlack)}
+		game := &instance{sets: []Set{run}}
+		readFromStringInput(t, "0\n0\n")
+		err := player.split(game)
+		assert.NoError(t, err)
+		assert.Len(t, player.rack, 0)
+		assert.Len(t, game.sets, 2)
+		assert.Len(t, game.sets[0].(*set).tiles, 4)
+		assert.Len(t, game.sets[1].(*set).tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnSplitGroup", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(13), ColorBlack)}}
+		group := &set{tiles: createGroupTiles(t, 4, Value(13))}
+		game := &instance{sets: []Set{group}}
+		readFromStringInput(t, "0\n0\n")
+		err := player.split(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, game.sets, 1)
+	})
+	t.Run("ShouldReturnErrorOnBadSet", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(13), ColorBlack)}}
+		game := new(instance)
+		readFromStringInput(t, "0\n")
+		err := player.split(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Empty(t, game.sets)
+	})
+	t.Run("ShouldReturnErrorOnBadPiece", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(13), ColorBlack)}}
+		run := &set{tiles: createRunTiles(t, 1, 6, ColorBlack)}
+		game := &instance{sets: []Set{run}}
+		readFromStringInput(t, "0\n1\n")
+		err := player.split(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, game.sets, 1)
 	})
 }
