@@ -9,6 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestScore(t *testing.T) {
+	player := &player{rack: createGroupTiles(t, 3, Value(5))}
+	score := player.Score()
+	assert.Equal(t, score, uint16(15))
+}
+
+func TestTotalMoves(t *testing.T) {
+	player := &player{totalMoves: 73}
+	assert.Equal(t, player.TotalMoves(), uint16(73))
+}
+
 func TestParseInt(t *testing.T) {
 	t.Run("ShouldReturnInt", func(t *testing.T) {
 		result, err := parseInt("2")
@@ -23,49 +34,70 @@ func TestParseInt(t *testing.T) {
 }
 
 func TestSelectPiece(t *testing.T) {
-	game := &instance{sets: []Set{&set{createGroupTiles(t, 4, Value(11))}}}
+	game := new(instance)
 	player := &player{rack: []Piece{NewPiece(Value(7), ColorGreen), NewPiece(Value(3), ColorBlue)}}
 	t.Run("ShouldSelectPieceFromRack", func(t *testing.T) {
-		selected := player.selectPiece("r0\n", game)
+		game := &instance{sets: []Set{&set{createGroupTiles(t, 4, Value(11))}}}
+		selected, err := player.selectPiece("r0\n", game)
+		assert.NoError(t, err)
 		assert.NotNil(t, selected)
 		assert.Same(t, selected.(*piece), player.rack[0].(*piece))
 	})
-	t.Run("ShouldReturnNilOnInvalidRackInput", func(t *testing.T) {
-		selected := player.selectPiece("rbad input\n", game)
-		assert.Nil(t, selected)
-	})
-	t.Run("ShouldReturnNilOnInvalidRackIndex", func(t *testing.T) {
-		selected := player.selectPiece("r73\n", game)
-		assert.Nil(t, selected)
-	})
 	t.Run("ShouldSelectPieceFromSet", func(t *testing.T) {
-		selected := player.selectPiece("s0,2\n", game)
+		game := &instance{sets: []Set{&set{createGroupTiles(t, 4, Value(11))}}}
+		expectedPiece := game.sets[0].(*set).tiles[2]
+		selected, err := player.selectPiece("s0,2\n", game)
+		assert.NoError(t, err)
 		assert.NotNil(t, selected)
-		assert.Same(t, selected.(*piece), game.sets[0].(*set).tiles[2])
+		assert.Same(t, selected.(*piece), expectedPiece)
+		assert.Len(t, game.sets[0].(*set).tiles, 3)
 	})
-	t.Run("ShouldReturnNilOnInvalidSelection", func(t *testing.T) {
-		selected := player.selectPiece("s02\n", game)
+	t.Run("ShouldReturnErrorOnInvalidRackInput", func(t *testing.T) {
+		selected, err := player.selectPiece("rbad input\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
-	t.Run("ShouldReturnNilOnBadSetInput", func(t *testing.T) {
-		selected := player.selectPiece("sbad set,2\n", game)
+	t.Run("ShouldReturnErrorOnInvalidRackIndex", func(t *testing.T) {
+		selected, err := player.selectPiece("r73\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
-	t.Run("ShouldReturnNilOnBadPieceInput", func(t *testing.T) {
-		selected := player.selectPiece("s0,bad piece\n", game)
+	t.Run("ShouldReturnErrorOnInvalidSelection", func(t *testing.T) {
+		selected, err := player.selectPiece("s02\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
-	t.Run("ShouldReturnNilOnInvalidSetSelection", func(t *testing.T) {
-		selected := player.selectPiece("s2,2\n", game)
+	t.Run("ShouldReturnErrorOnBadSetInput", func(t *testing.T) {
+		selected, err := player.selectPiece("sbad set,2\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
-	t.Run("ShouldReturnNilOnInvalidPieceSelection", func(t *testing.T) {
-		selected := player.selectPiece("s0,7\n", game)
+	t.Run("ShouldReturnErrorOnBadPieceInput", func(t *testing.T) {
+		selected, err := player.selectPiece("s0,bad piece\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
-	t.Run("ShouldReturnNilOnBadInput", func(t *testing.T) {
-		selected := player.selectPiece("bad input\n", game)
+	t.Run("ShouldReturnErrorOnInvalidSetSelection", func(t *testing.T) {
+		selected, err := player.selectPiece("s2,2\n", game)
 		assert.Nil(t, selected)
+		assert.Error(t, err)
+	})
+	t.Run("ShouldReturnErrorOnInvalidPieceSelection", func(t *testing.T) {
+		game := &instance{sets: []Set{&set{createGroupTiles(t, 4, Value(11))}}}
+		selected, err := player.selectPiece("s0,7\n", game)
+		assert.Nil(t, selected)
+		assert.Error(t, err)
+	})
+	t.Run("ShouldReturnErrorOnBadInput", func(t *testing.T) {
+		selected, err := player.selectPiece("bad input\n", game)
+		assert.Nil(t, selected)
+		assert.Error(t, err)
+	})
+	t.Run("ShouldReturnErrorOnBadRemove", func(t *testing.T) {
+		game := &instance{sets: []Set{&set{createRunTiles(t, 1, 3, ColorGreen)}}}
+		selected, err := player.selectPiece("s0,1", game)
+		assert.Nil(t, selected)
+		assert.Error(t, err)
 	})
 }
 
@@ -172,6 +204,37 @@ func TestSetPrompt(t *testing.T) {
 	})
 }
 
+func TestStartTurn(t *testing.T) {
+	t.Run("ShouldAddPieceToRackOnNoSuccessfulMoves", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(4), ColorBlack)}}
+		game := &instance{tiles: []Piece{NewPiece(Value(5), ColorBlue)}}
+		readFromStringInput(t, "help\nnot a command\ndone\n")
+		player.StartTurn(game)
+		assert.Equal(t, player.TotalMoves(), uint16(0))
+		assert.Len(t, player.rack, 2)
+		assert.Len(t, game.tiles, 0)
+	})
+	t.Run("ShouldNotAddPieceToRackOnInsert", func(t *testing.T) {
+		player := &player{rack: []Piece{NewPiece(Value(11), ColorGreen)}}
+		group := &set{tiles: createGroupTiles(t, 3, Value(11))}
+		game := &instance{tiles: []Piece{NewPiece(Value(5), ColorBlue)}, sets: []Set{group}}
+		readFromStringInput(t, "insert\n0\n0\ndone\n")
+		player.StartTurn(game)
+		assert.Equal(t, player.TotalMoves(), uint16(1))
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.tiles, 1)
+	})
+	t.Run("ShouldNotAddPieceToRackOnCombine", func(t *testing.T) {
+		player := &player{rack: createRunTiles(t, 11, 13, ColorRed)}
+		game := &instance{tiles: []Piece{NewPiece(Value(5), ColorBlue)}, sets: []Set{}}
+		readFromStringInput(t, "combine\nr0\nr1\nr2\ndone\ndone\n")
+		player.StartTurn(game)
+		assert.Equal(t, player.TotalMoves(), uint16(1))
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.sets, 1)
+	})
+}
+
 func TestPlayerInsert(t *testing.T) {
 	t.Run("ShouldInsertIntoSet", func(t *testing.T) {
 		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
@@ -212,5 +275,59 @@ func TestPlayerInsert(t *testing.T) {
 		assert.Error(t, err)
 		assert.Len(t, player.rack, 1)
 		assert.Len(t, set.tiles, 3)
+	})
+}
+
+func TestPlayerCombine(t *testing.T) {
+	t.Run("ShouldCombinePiecesFromRack", func(t *testing.T) {
+		game := new(instance)
+		player := &player{rack: createRunTiles(t, 1, 5, ColorBlue)}
+		readFromStringInput(t, "r0\nr1\nr2\nr3\nr4\ndone\n")
+		err := player.combine(game)
+		assert.NoError(t, err)
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.sets, 1)
+		assert.Len(t, game.sets[0].(*set).tiles, 5)
+	})
+	t.Run("ShouldCombinePiecesFromRackAndBoard", func(t *testing.T) {
+		run := &set{tiles: createRunTiles(t, 1, 4, ColorRed)}
+		game := &instance{sets: []Set{run}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorRed), NewPiece(Value(6), ColorRed)}}
+		readFromStringInput(t, "s0,3\nr0\nr1\ndone\n")
+		err := player.combine(game)
+		assert.NoError(t, err)
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.sets, 2)
+		assert.Len(t, game.sets[0].(*set).tiles, 3)
+		assert.Len(t, game.sets[1].(*set).tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadPiece", func(t *testing.T) {
+		run := &set{tiles: createRunTiles(t, 1, 3, ColorRed)}
+		game := &instance{sets: []Set{run}}
+		player := &player{rack: []Piece{NewPiece(Value(4), ColorRed), NewPiece(Value(5), ColorRed)}}
+		readFromStringInput(t, "s0,2\nr0\nr1\ndone\n")
+		err := player.combine(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 2)
+		assert.Len(t, game.sets, 1)
+		assert.Len(t, game.sets[0].(*set).tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadCombine", func(t *testing.T) {
+		run := &set{tiles: createRunTiles(t, 1, 4, ColorRed)}
+		game := &instance{sets: []Set{run}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorRed), NewPiece(Value(7), ColorRed)}}
+		readFromStringInput(t, "s0,3\nr0\nr1\ndone\n")
+		err := player.combine(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 2)
+		assert.Len(t, game.sets, 1)
+		assert.Len(t, game.sets[0].(*set).tiles, 4)
+	})
+	t.Run("ShouldReturnErrorOnReaderError", func(t *testing.T) {
+		player := new(player)
+		game := new(instance)
+		readerError(t)
+		err := player.combine(game)
+		assert.Error(t, err)
 	})
 }

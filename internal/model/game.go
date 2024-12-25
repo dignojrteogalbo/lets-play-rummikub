@@ -24,6 +24,8 @@ type (
 		Start()
 		PrintBoard()
 		TakePiece() Piece
+		SetBoard(board []Set)
+		CloneBoard() []Set
 	}
 
 	instance struct {
@@ -68,6 +70,18 @@ func NewGame(totalPlayers uint) Game {
 	return instance
 }
 
+func (game *instance) CloneBoard() []Set {
+	clone := make([]Set, len(game.sets))
+	for i := range game.sets {
+		clone[i] = game.sets[i].Clone()
+	}
+	return clone
+}
+
+func (game *instance) SetBoard(board []Set) {
+	game.sets = board
+}
+
 func (g *instance) Shuffle() {
 	for i := range g.tiles {
 		j := rand.Intn(i + 1)
@@ -76,6 +90,9 @@ func (g *instance) Shuffle() {
 }
 
 func (g *instance) TakePiece() Piece {
+	if len(g.tiles) == 0 {
+		return nil
+	}
 	piece := g.tiles[len(g.tiles)-1]
 	g.tiles = g.tiles[:len(g.tiles)-1]
 	return piece
@@ -140,7 +157,6 @@ func (g *instance) AddSet(set Set) {
 
 func (g *instance) Start() {
 	for !g.IsGameOver() {
-		g.PrintBoard()
 		g.NextTurn()
 	}
 	g.PrintScores()

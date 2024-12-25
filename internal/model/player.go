@@ -25,6 +25,9 @@ func NewPlayer() Player {
 }
 
 func (p *player) DealPiece(piece Piece) {
+	if piece == nil {
+		return
+	}
 	p.rack = append(p.rack, piece)
 }
 
@@ -36,10 +39,16 @@ func (p *player) printRack() {
 func (player *player) StartTurn(game Game) {
 	successfulMoves := uint16(0)
 	for {
+		game.PrintBoard()
 		player.printRack()
-		input, err := Reader.ReadString('\n')
-		command := strings.TrimSpace(input)
-		if err != nil || input == "done" {
+		fmt.Print("Enter a command (combine, insert, split, done): ")
+		command, err := Reader.ReadString('\n')
+		command = strings.TrimSpace(command)
+		if err != nil || command == "done" {
+			player.totalMoves = player.totalMoves + successfulMoves
+			if successfulMoves == 0 {
+				player.DealPiece(game.TakePiece())
+			}
 			break
 		}
 		parseCommand(command, &successfulMoves, player, game)
@@ -58,11 +67,13 @@ func (p *player) TotalMoves() uint16 {
 	return p.totalMoves
 }
 
-func (player *player) removePiece(piece Piece) {
-	for index, p := range player.rack {
-		if piece.IsSamePiece(p) {
-			player.rack = append(player.rack[:index], player.rack[index+1:]...)
-			return
+func (player *player) removePiece(pieces ...Piece) {
+	for _, piece := range pieces {
+		for index, p := range player.rack {
+			if piece.IsSamePiece(p) {
+				player.rack = append(player.rack[:index], player.rack[index+1:]...)
+				break
+			}
 		}
 	}
 }
@@ -129,10 +140,45 @@ func (p *player) insert(game Game) error {
 	return nil
 }
 
+func (player *player) combine(game Game) error {
+	pieces := make([]Piece, 0)
+	originalBoard := game.CloneBoard()
+	for {
+		fmt.Print("Select a piece <r#|s#,#|done> : ")
+		input, err := Reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		input = strings.TrimSpace(input)
+		if input == "done" {
+			break
+		}
+		piece, err := player.selectPiece(input, game)
+		if err != nil {
+			game.SetBoard(originalBoard)
+			return err
+		}
+		pieces = append(pieces, piece)
+		fmt.Printf("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
+	}
+	set, err := Combine(pieces...)
+	if err != nil {
+		game.SetBoard(originalBoard)
+		return err
+	}
+	player.removePiece(pieces...)
+	game.AddSet(set)
+	return nil
+}
+
 func parseCommand(input string, successfulMoves *uint16, player *player, game Game) {
 	switch input {
 	case "combine":
-
+		if err := player.combine(game); err != nil {
+			fmt.Println(err)
+		} else {
+			*successfulMoves++
+		}
 	case "insert":
 		if err := player.insert(game); err != nil {
 			fmt.Println(err)
@@ -165,50 +211,53 @@ func (p *player) Piece(index int) (Piece, error) {
 	return p.rack[index], nil
 }
 
-func (player *player) selectPiece(selection string, game Game) Piece {
-	selection = strings.TrimSpace(selection)
-	start := string(selection[0])
+func (player *player) selectPiece(input string, game Game) (Piece, error) {
+	input = strings.TrimSpace(input)
+	start, selection := string(input[0]), string(input[1:])
 	if start == "r" {
-		index, err := parseInt(selection[1:])
-		if err != nil {
-			fmt.Println("Invalid input")
-			return nil
-		}
-		if piece, err := player.Piece(index); err != nil {
-			fmt.Println("Invalid piece selection")
-			return nil
-		} else {
-			return piece
-		}
+		return selectRackPiece(selection, player)
 	}
 	if start == "s" {
-		tuple := strings.Split(selection[1:], ",")
-		if len(tuple) != 2 {
-			fmt.Println("Invalid input")
-			return nil
-		}
-		setIndex, err := parseInt(tuple[0])
-		if err != nil {
-			fmt.Println("Invalid input")
-			return nil
-		}
-		pieceIndex, err := parseInt(tuple[1])
-		if err != nil {
-			fmt.Println("Invalid input")
-			return nil
-		}
-		set, err := game.Set(setIndex)
-		if err != nil {
-			fmt.Println("Invalid set selection")
-			return nil
-		}
-		piece, err := set.Piece(pieceIndex)
-		if err != nil {
-			fmt.Println("Invalid piece selection")
-			return nil
-		}
-		return piece
+		return selectSetPiece(selection, game)
 	}
-	fmt.Println("Invalid input")
-	return nil
+	return nil, errors.New(InvalidPieceSelection)
+}
+
+func selectRackPiece(selection string, player *player) (Piece, error) {
+	index, err := parseInt(selection)
+	if err != nil {
+		return nil, err
+	}
+	piece, err := player.Piece(index)
+	if err != nil {
+		return nil, err
+	}
+	return piece, nil
+}
+
+func selectSetPiece(selection string, game Game) (Piece, error) {
+	tuple := strings.Split(selection, ",")
+	if len(tuple) != 2 {
+		return nil, errors.New(InvalidNumberInput)
+	}
+	setIndex, err := parseInt(tuple[0])
+	if err != nil {
+		return nil, err
+	}
+	pieceIndex, err := parseInt(tuple[1])
+	if err != nil {
+		return nil, err
+	}
+	set, err := game.Set(setIndex)
+	if err != nil {
+		return nil, err
+	}
+	piece, err := set.Piece(pieceIndex)
+	if err != nil {
+		return nil, err
+	}
+	if err := set.Remove(piece); err != nil {
+		return nil, err
+	}
+	return piece, nil
 }

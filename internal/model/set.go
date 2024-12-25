@@ -134,6 +134,9 @@ func (s *set) cloneTiles() []Piece {
 //region insert set
 
 func (s *set) insertIntoGroup(piece Piece) error {
+	if len(s.tiles) == 4 {
+		return errors.New(CannotInsert)
+	}
 	if !piece.IsSameValue(s.tiles[0]) {
 		return errors.New(WrongValueForGroup)
 	}

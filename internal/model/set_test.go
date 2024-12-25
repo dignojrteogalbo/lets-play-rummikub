@@ -147,6 +147,12 @@ func TestInsert(t *testing.T) {
 		err := group.Insert(piece)
 		assert.EqualError(t, err, WrongValueForGroup)
 	})
+	t.Run("ShouldReturnErrorOnTooManyPieces", func(t *testing.T) {
+		group := &set{tiles: createGroupTiles(t, 4, Value(5))}
+		piece := NewPiece(5, ColorGreen)
+		err := group.Insert(piece)
+		assert.EqualError(t, err, CannotInsert)
+	})
 	// run cases
 	t.Run("ShouldInsertAtEndOfRun", func(t *testing.T) {
 		piece := NewPiece(7, ColorRed)
