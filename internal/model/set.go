@@ -107,7 +107,7 @@ func isRun(s *set) bool {
 }
 
 func isValidSet(s *set) bool {
-	if s == nil || len(s.tiles) < 3 {
+	if s == nil || len(s.tiles) < 3 || len(s.tiles) > 13 {
 		return false
 	}
 	return isGroup(s) || isRun(s)
@@ -128,6 +128,10 @@ func (s *set) findIndex(piece Piece) int {
 //region set manipulation
 
 func (s *set) insertPiece(piece Piece, index int) {
+	if len(s.tiles) == 0 {
+		s.tiles = []Piece{piece}
+		return
+	}
 	if index == len(s.tiles) {
 		s.tiles = append(s.tiles, piece)
 	} else {
