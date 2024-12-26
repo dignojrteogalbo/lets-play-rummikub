@@ -153,6 +153,9 @@ func (s *set) cloneTiles() []Piece {
 //region insert set
 
 func (s *set) Insert(piece Piece, index int) (Set, error) {
+	if index < 0 || index > len(s.tiles) {
+		return nil, errors.New(IndexOutOfBounds(len(s.tiles)))
+	}
 	if len(s.tiles) != 0 && s.findIndex(piece) >= 0 {
 		return nil, errors.New(InvalidPiece)
 	}

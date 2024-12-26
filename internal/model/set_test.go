@@ -152,107 +152,39 @@ func TestInsertPiece(t *testing.T) {
 	})
 }
 
-// func TestRemove(t *testing.T) {
-// 	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
-// 		group := &set{tiles: createGroupTiles(t, uint(3), Value(4))}
-// 		piece, err := group.Piece(0)
-// 		assert.NoError(t, err)
-// 		err = group.Remove(piece)
-// 		assert.EqualError(t, err, TooFewPieces)
-// 	})
-// 	t.Run("ShouldReturnErrorOnPieceNotInSet", func(t *testing.T) {
-// 		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-// 		piece := NewPiece(4, ColorGreen)
-// 		err := group.Remove(piece)
-// 		assert.EqualError(t, err, InvalidPiece)
-// 	})
-// 	t.Run("ShouldRemoveFromGroup", func(t *testing.T) {
-// 		group := &set{tiles: []Piece{NewPiece(4, ColorBlue), NewPiece(4, ColorBlack), NewPiece(4, ColorRed), NewPiece(4, ColorGreen)}}
-// 		piece, err := group.Piece(2)
-// 		assert.NoError(t, err)
-// 		err = group.Remove(piece)
-// 		assert.NoError(t, err)
-// 		assert.NotContains(t, group.tiles, piece)
-// 	})
-// 	t.Run("ShouldReturnErrorOnInvalidSet", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 4, 8, ColorRed)}
-// 		piece, err := run.Piece(2)
-// 		assert.NoError(t, err)
-// 		err = run.Remove(piece)
-// 		assert.EqualError(t, err, InvalidSet)
-// 	})
-// }
-
-// func TestSplit(t *testing.T) {
-// 	t.Run("ShouldReturnErrorOnSplitGroup", func(t *testing.T) {
-// 		group := &set{tiles: createGroupTiles(t, 4, Value(1))}
-// 		piece := NewPiece(Value(1), ColorGreen)
-// 		split, err := group.Split(piece)
-// 		assert.Nil(t, split)
-// 		assert.EqualError(t, err, CannotSplit)
-// 	})
-// 	t.Run("ShouldReturnErrorOnRunLength<6", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 4, 6, ColorRed)}
-// 		piece := NewPiece(Value(5), ColorRed)
-// 		split, err := run.Split(piece)
-// 		assert.Nil(t, split)
-// 		assert.EqualError(t, err, TooFewPieces)
-// 	})
-// 	t.Run("ShouldReturnErrorOnInvalidPiece", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 4, 8, ColorBlack)}
-// 		piece := NewPiece(Value(6), ColorBlue)
-// 		split, err := run.Split(piece)
-// 		assert.Nil(t, split)
-// 		assert.EqualError(t, err, InvalidPiece)
-// 	})
-// 	t.Run("ShouldReturnErrorOnSmallSplit", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 4, 8, ColorBlue)}
-// 		piece := NewPiece(Value(5), ColorBlue)
-// 		split, err := run.Split(piece)
-// 		assert.Nil(t, split)
-// 		assert.EqualError(t, err, TooFewPieces)
-// 	})
-// 	t.Run("ShouldSplitRun", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 9, ColorGreen)}
-// 		piece := NewPiece(Value(7), ColorGreen)
-// 		split, err := run.Split(piece)
-// 		if assert.NoError(t, err) {
-// 			assert.NotNil(t, split)
-// 			assert.ElementsMatch(t, run.tiles, createRunTiles(t, 1, 7, ColorGreen))
-// 			assert.ElementsMatch(t, split.(*set).tiles, createRunTiles(t, 7, 9, ColorGreen))
-// 		}
-// 	})
-// }
-
-// func TestCombine(t *testing.T) {
-// 	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
-// 		pieces := []Piece{NewPiece(Value(2), ColorGreen), NewPiece(Value(2), ColorBlue)}
-// 		set, err := Combine(pieces...)
-// 		assert.EqualError(t, err, TooFewPieces)
-// 		assert.Nil(t, set)
-// 	})
-// 	t.Run("ShouldReturnErrorOnInvalidRun", func(t *testing.T) {
-// 		pieces := []Piece{NewPiece(Value(1), ColorGreen), NewPiece(Value(2), ColorGreen), NewPiece(Value(4), ColorGreen)}
-// 		invalidRun, err := Combine(pieces...)
-// 		assert.EqualError(t, err, InvalidSet)
-// 		assert.Nil(t, invalidRun)
-// 	})
-// 	t.Run("ShouldReturnErrorOnInvalidGroup", func(t *testing.T) {
-// 		pieces := []Piece{NewPiece(Value(7), ColorGreen), NewPiece(Value(7), ColorBlue), NewPiece(Value(7), ColorGreen)}
-// 		invalidRun, err := Combine(pieces...)
-// 		assert.EqualError(t, err, InvalidSet)
-// 		assert.Nil(t, invalidRun)
-// 	})
-// 	t.Run("ShouldReturnRun", func(t *testing.T) {
-// 		pieces := createRunTiles(t, 7, 13, ColorRed)
-// 		run, err := Combine(pieces...)
-// 		assert.NoError(t, err)
-// 		assert.NotNil(t, run)
-// 	})
-// 	t.Run("ShouldReturnGroup", func(t *testing.T) {
-// 		pieces := createGroupTiles(t, 4, Value(11))
-// 		group, err := Combine(pieces...)
-// 		assert.NoError(t, err)
-// 		assert.NotNil(t, group)
-// 	})
-// }
+func TestInsert(t *testing.T) {
+	t.Run("ShouldInsertPiece", func(t *testing.T) {
+		existingPiece := NewPiece(Value(5), ColorBlack)
+		original := &set{tiles: []Piece{existingPiece}}
+		piece := NewPiece(Value(6), ColorBlack)
+		inserted, err := original.Insert(piece, 1)
+		assert.Len(t, original.tiles, 1)
+		assert.NoError(t, err)
+		assert.NotNil(t, inserted)
+		assert.NotSame(t, inserted, original)
+		assert.Len(t, inserted.(*set).tiles, 2)
+		assert.Same(t, inserted.(*set).tiles[1], piece)
+		assert.Same(t, inserted.(*set).tiles[0], existingPiece)
+	})
+	t.Run("ShouldReturnErrorOnNegativeIndex", func(t *testing.T) {
+		set := new(set)
+		piece := NewPiece(ValueJoker, ColorBlack)
+		inserted, err := set.Insert(piece, -1)
+		assert.EqualError(t, err, IndexOutOfBounds(len(set.tiles)))
+		assert.Nil(t, inserted)
+	})
+	t.Run("ShouldReturnErrorOnIndexOutOfBounds", func(t *testing.T) {
+		set := &set{tiles: []Piece{NewPiece(Value(5), ColorBlack)}}
+		piece := NewPiece(ValueJoker, ColorBlack)
+		inserted, err := set.Insert(piece, 73)
+		assert.EqualError(t, err, IndexOutOfBounds(len(set.tiles)))
+		assert.Nil(t, inserted)
+	})
+	t.Run("ShouldReturnErrorOnExistingPiece", func(t *testing.T) {
+		piece := NewPiece(Value(9), ColorBlack)
+		set := &set{tiles: []Piece{piece}}
+		inserted, err := set.Insert(piece, 1)
+		assert.EqualError(t, err, InvalidPiece)
+		assert.Nil(t, inserted)
+	})
+}
