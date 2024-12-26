@@ -16,10 +16,10 @@ const (
 	WrongValueForGroup      = string("piece does not match the value of the group")
 )
 
-func IndexOutOfBounds(max int, name ...string) string {
+func IndexOutOfBounds(min, max int, name ...string) string {
 	label := "index"
 	if len(name) > 0 {
 		label = name[0]
 	}
-	return fmt.Sprintf("%s must be >= 0 and < %d", label, max)
+	return fmt.Sprintf("%s must be > %d and < %d", label, min, max)
 }

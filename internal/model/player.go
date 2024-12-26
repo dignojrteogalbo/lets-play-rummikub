@@ -227,8 +227,8 @@ func parseInt(input string) (int, error) {
 }
 
 func (p *player) Piece(index int) (Piece, error) {
-	if index < 0 || index >= len(p.rack) {
-		return nil, errors.New(IndexOutOfBounds(len(p.rack)-1, "piece"))
+	if index < 0 || index > len(p.rack)-1 {
+		return nil, errors.New(IndexOutOfBounds(-1, len(p.rack), "piece"))
 	}
 	return p.rack[index], nil
 }

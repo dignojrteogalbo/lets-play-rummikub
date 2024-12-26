@@ -46,7 +46,7 @@ func (s *set) Piece(index int) (Piece, error) {
 		return nil, errors.New(InvalidSet)
 	}
 	if index < 0 || index >= len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
+		return nil, errors.New(IndexOutOfBounds(-1, len(s.tiles)))
 	}
 	return s.tiles[index], nil
 }
@@ -150,7 +150,7 @@ func (s *set) cloneTiles() []Piece {
 
 func (s *set) Insert(piece Piece, index int) (Set, error) {
 	if index < 0 || index > len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(len(s.tiles)))
+		return nil, errors.New(IndexOutOfBounds(-1, len(s.tiles)+1))
 	}
 	if len(s.tiles) != 0 && s.findIndex(piece) >= 0 {
 		return nil, errors.New(InvalidPiece)
@@ -178,14 +178,14 @@ func (s *set) Remove(piece Piece) (Set, error) {
 //region split set
 
 func (s *set) Split(index int) (Set, Set, error) {
-	if index < 0 || index >= len(s.tiles) {
-		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
-	}
 	if len(s.tiles) < 2 {
 		return nil, nil, errors.New(TooFewPieces)
 	}
+	if index < 1 || index >= len(s.tiles) {
+		return nil, nil, errors.New(IndexOutOfBounds(0, len(s.tiles)))
+	}
 	clone := s.cloneTiles()
-	return &set{tiles: clone[:index]}, &set{tiles: clone[index+1:]}, nil
+	return &set{tiles: clone[:index]}, &set{tiles: clone[index:]}, nil
 }
 
 //region combine set

@@ -107,8 +107,8 @@ func (g *instance) DealPieces() {
 }
 
 func (g *instance) Set(index int) (Set, error) {
-	if index < 0 || index >= len(g.sets) {
-		return nil, errors.New(IndexOutOfBounds(len(g.sets)-1, "set"))
+	if index < 0 || index > len(g.sets)-1 {
+		return nil, errors.New(IndexOutOfBounds(-1, len(g.sets), "set"))
 	}
 	return g.sets[index], nil
 }

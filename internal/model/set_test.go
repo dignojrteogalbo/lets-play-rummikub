@@ -135,10 +135,10 @@ func TestPiece(t *testing.T) {
 	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
 		get := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack)}}
 		piece, err := get.Piece(-1)
-		assert.EqualError(t, err, IndexOutOfBounds(0))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
 		assert.Nil(t, piece)
 		piece, err = get.Piece(1)
-		assert.EqualError(t, err, IndexOutOfBounds(0))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
 		assert.Nil(t, piece)
 	})
 }
@@ -217,14 +217,14 @@ func TestInsert(t *testing.T) {
 		set := new(set)
 		piece := NewPiece(ValueJoker, ColorBlack)
 		inserted, err := set.Insert(piece, -1)
-		assert.EqualError(t, err, IndexOutOfBounds(len(set.tiles)))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
 		assert.Nil(t, inserted)
 	})
 	t.Run("ShouldReturnErrorOnIndexOutOfBounds", func(t *testing.T) {
 		set := &set{tiles: []Piece{NewPiece(Value(5), ColorBlack)}}
 		piece := NewPiece(ValueJoker, ColorBlack)
 		inserted, err := set.Insert(piece, 73)
-		assert.EqualError(t, err, IndexOutOfBounds(len(set.tiles)))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 2))
 		assert.Nil(t, inserted)
 	})
 	t.Run("ShouldReturnErrorOnExistingPiece", func(t *testing.T) {
@@ -287,5 +287,44 @@ func TestRemove(t *testing.T) {
 		assert.Len(t, original.tiles, 1)
 		assert.EqualError(t, err, InvalidPiece)
 		assert.Nil(t, removed)
+	})
+}
+
+func TestSplit(t *testing.T) {
+	t.Run("ShouldSplitSet", func(t *testing.T) {
+		left, right := NewPiece(Value(1), ColorBlack), NewPiece(Value(2), ColorBlack)
+		original := &set{tiles: []Piece{left, right}}
+		lower, upper, err := original.Split(1)
+		assert.Len(t, original.tiles, 2)
+		assert.NoError(t, err)
+		assert.NotNil(t, lower)
+		assert.NotNil(t, upper)
+		assert.NotSame(t, original, lower)
+		assert.NotSame(t, original, upper)
+		assert.Len(t, lower.(*set).tiles, 1)
+		assert.Same(t, lower.(*set).tiles[0], left)
+		assert.Len(t, upper.(*set).tiles, 1)
+		assert.Same(t, upper.(*set).tiles[0], right)
+	})
+	t.Run("ShouldReturnErrorOnTooFewPieces", func(t *testing.T) {
+		original := &set{tiles: []Piece{NewPiece(Value(5), ColorGreen)}}
+		lower, upper, err := original.Split(0)
+		assert.Len(t, original.tiles, 1)
+		assert.EqualError(t, err, TooFewPieces)
+		assert.Nil(t, lower)
+		assert.Nil(t, upper)
+	})
+	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
+		original := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack), NewPiece(Value(2), ColorBlack)}}
+		lower, upper, err := original.Split(-1)
+		assert.Len(t, original.tiles, 2)
+		assert.EqualError(t, err, IndexOutOfBounds(0, 2))
+		assert.Nil(t, lower)
+		assert.Nil(t, upper)
+		lower, upper, err = original.Split(2)
+		assert.Len(t, original.tiles, 2)
+		assert.EqualError(t, err, IndexOutOfBounds(0, 2))
+		assert.Nil(t, lower)
+		assert.Nil(t, upper)
 	})
 }

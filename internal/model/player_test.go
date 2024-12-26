@@ -152,7 +152,7 @@ func TestPromptForPiece(t *testing.T) {
 	t.Run("ShouldReturnErrorOnInvalidSelection", func(t *testing.T) {
 		readFromStringInput(t, "5\n")
 		piece, err := player.promptForPiece(nil)
-		assert.EqualError(t, err, IndexOutOfBounds(len(player.rack)-1, "piece"))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1, "piece"))
 		assert.Nil(t, piece)
 	})
 	t.Run("ShouldReturnErrorOnReaderError", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestPromptForSet(t *testing.T) {
 	t.Run("ShouldReturnErrorOnInvalidSelection", func(t *testing.T) {
 		readFromStringInput(t, "5\n")
 		selection, err := player.promptForSet(game)
-		assert.EqualError(t, err, IndexOutOfBounds(len(game.sets)-1, "set"))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1, "set"))
 		assert.Nil(t, selection)
 	})
 	t.Run("ShouldReturnErrorOnReaderError", func(t *testing.T) {
@@ -212,7 +212,7 @@ func TestSetPrompt(t *testing.T) {
 	t.Run("ShouldReturnErrorOnSelection", func(t *testing.T) {
 		readFromStringInput(t, "73\n")
 		selected, err := player.promptForSet(game)
-		assert.EqualError(t, err, IndexOutOfBounds(len(game.sets)-1, "set"))
+		assert.EqualError(t, err, IndexOutOfBounds(-1, 1, "set"))
 		assert.Nil(t, selected)
 	})
 }
