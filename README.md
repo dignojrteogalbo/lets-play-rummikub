@@ -70,3 +70,71 @@ line interface where the use can tell which operation they wanted to invoke and
 passed in parameters to these operations. Overall this was a good first attempt
 but I have a few new more ideas in mind to make the code better. These will be
 expanded upon in the next version.
+
+## Version 2
+
+In this next version, I realized that the operations for insert, splitting,
+and combining pieces all had only one correct way of doing it. For instance, you
+are allowed to insert into a group only if the piece is matching the value and
+fulfills the missing piece. Inserting into a run is only possible at the end or
+beginning. Pieces can only be removed if the remaining tiles are a valid set.
+Splitting can only happen when you introduce an additional piece and both sets
+from the split are valid sets.
+
+Thus with this in mind, I went ahead and simplified the insert, remove, split,
+and combine operations to take Pieces as parameters. Performing the validation
+on the set after the operation, returning an error otherwise. In the cases of
+splitting and combining where a new Set is created, we also return the created
+Set to add to the board.
+
+This made the player commands a lot more simpler where before they needed to
+provide positional indexes to the command. Now the player can use a generic
+piece selection method and pass the selected pieces into the command.
+
+In the terminal interface, performing an operation such as insert is simply:
+select the set from the board by index, select the piece from the rack by index.
+The removal from the set and rack is hidden from the player. Splitting a set is
+also the same process of selecting the run to split and selecting the piece from
+the rack. Combining pieces into a set is also as easy as selecting pieces from
+sets via the s#,# notation or selecting a piece from the rack via the r# notation.
+
+Although this limits the player into performing strictly valid operations. Consider
+the multiple split example from the rule set. The player can do this by combining
+pieces from the sets together but when removing the pieces from the sets, the
+intermediary sets are considered invalid.
+
+In this example, a set denotes pieces encapsulated by square brackets. A piece
+value and it's color are denoted by the number followed by W, X, Y, Z as color
+(e.g. 1W, 9Y, 3Z, etc.). Pieces in the player's rack are surrounded by parentheses.
+
+This is the start of a player's turn:
+Player: (10Y, 5Z)
+Board: [5W, 6W, 7W] [5X, 6X, 7X] [5Y, 6Y, 7Y, 8Y, 9Y]
+
+But at the end they want the state of the game to be:
+Player: ()
+Board: [5W, 5X, 5Y, 5Z] [6W, 6X, 6Y] [7W, 7X, 7Y] [8Y, 9Y, 10Y]
+
+In reaching this end state, a player might create this intermediary state:
+Player: (10Y, 5Z)
+Board: [5W, 5X, 5Y] [6W, 7W] [6X, 7X] [6Y, 7Y, 8Y, 9Y]
+
+Because we are performing set validations during each operation, there is only
+one way to reach this end state. Thus limiting the creativity and overall fun of
+the game.
+
+Player inserts 10Y into [5Y, 6Y, 7Y, 8Y, 9Y] resulting in [5Y, 6Y, 7Y, 8Y, 9Y, 10Y]
+Player combines 5W, 5X, 5Y resulting in [5W, 5X, 5Y]
+Player inserts 5Z into [5W, 5X, 5Y] resulting in [5W, 5X, 5Y, 5Z]
+Player combines 6W, 6X, 6Y resulting in [6W, 6X, 6Y]
+Player combines 7W, 7X, 7Y resulting in [7W, 7X, 7Y]
+Player replaces the set [5W, 6W, 7W] with [5W, 5X, 5Y, 5Z]
+Player replaces the set [5X, 6X, 7X] with [6W, 6X, 6Y]
+Player adds the set [7W, 7X, 7Y]
+Player adds the set [8Y, 9Y, 10Y]
+
+Although this order of operations keeps all the sets in a valid state, it is not
+intuitive or human friendly as the juggling of valid set operations is required.
+
+In the next version I want to address this and allow the player to perform these
+invalid moves, undo/redo them, and apply them once the player is satisfied.
