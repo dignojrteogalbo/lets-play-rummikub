@@ -118,6 +118,31 @@ func TestIsRun(t *testing.T) {
 	})
 }
 
+func TestPiece(t *testing.T) {
+	t.Run("ShouldReturnPiece", func(t *testing.T) {
+		expectedPiece := NewPiece(Value(1), ColorBlack)
+		get := &set{tiles: []Piece{expectedPiece}}
+		result, err := get.Piece(0)
+		assert.NoError(t, err)
+		assert.Same(t, result.(*piece), expectedPiece)
+	})
+	t.Run("ShouldReturnErrorOnEmptySet", func(t *testing.T) {
+		get := new(set)
+		result, err := get.Piece(0)
+		assert.EqualError(t, err, InvalidSet)
+		assert.Nil(t, result)
+	})
+	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
+		get := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack)}}
+		piece, err := get.Piece(-1)
+		assert.EqualError(t, err, IndexOutOfBounds(0))
+		assert.Nil(t, piece)
+		piece, err = get.Piece(1)
+		assert.EqualError(t, err, IndexOutOfBounds(0))
+		assert.Nil(t, piece)
+	})
+}
+
 func TestFindIndex(t *testing.T) {
 	t.Run("ShouldReturnIndex", func(t *testing.T) {
 		piece := NewPiece(Value(3), ColorGreen)
