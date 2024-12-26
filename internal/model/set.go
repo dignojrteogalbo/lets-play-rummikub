@@ -161,7 +161,7 @@ func (s *set) Insert(piece Piece, index int) (Set, error) {
 
 func (s *set) Remove(index int) (Set, Piece, error) {
 	if index < 0 || index >= len(s.tiles) {
-		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
+		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
 	}
 	if len(s.tiles) == 0 {
 		return nil, nil, errors.New(InvalidSet)
@@ -176,7 +176,7 @@ func (s *set) Remove(index int) (Set, Piece, error) {
 
 func (s *set) Split(index int) (Set, Set, error) {
 	if index < 0 || index >= len(s.tiles) {
-		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
+		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
 	}
 	if len(s.tiles) < 2 {
 		return nil, nil, errors.New(TooFewPieces)

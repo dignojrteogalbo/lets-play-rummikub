@@ -58,6 +58,11 @@ func TestIsGroup(t *testing.T) {
 		result := isGroup(group)
 		assert.True(t, result)
 	})
+	t.Run("ShouldReturnFalseOnTooFewPieces", func(t *testing.T) {
+		group := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack), NewPiece(Value(1), ColorBlue)}}
+		result := isGroup(group)
+		assert.False(t, result)
+	})
 	t.Run("ShouldReturnFalseOnWrongColor", func(t *testing.T) {
 		notGroup := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(7, ColorBlack), NewPiece(3, ColorGreen)}}
 		result := isGroup(notGroup)
