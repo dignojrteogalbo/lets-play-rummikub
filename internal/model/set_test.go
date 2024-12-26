@@ -328,3 +328,12 @@ func TestSplit(t *testing.T) {
 		assert.Nil(t, upper)
 	})
 }
+
+func TestCombine(t *testing.T) {
+	first, second, third := NewPiece(Value(13), ColorRed), NewPiece(Value(7), ColorBlack), NewPiece(Value(1), ColorGreen)
+	combined := Combine(first, second, third)
+	expectedPieces := []Piece{first, second, third}
+	assert.NotNil(t, combined)
+	assert.IsType(t, (*set)(nil), combined)
+	assert.ElementsMatch(t, combined.(*set).tiles, expectedPieces)
+}
