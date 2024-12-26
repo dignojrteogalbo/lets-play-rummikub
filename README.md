@@ -130,7 +130,7 @@ Player combines 6W, 6X, 6Y resulting in [6W, 6X, 6Y]
 Player combines 7W, 7X, 7Y resulting in [7W, 7X, 7Y]
 Player replaces the set [5W, 6W, 7W] with [5W, 5X, 5Y, 5Z]
 Player replaces the set [5X, 6X, 7X] with [6W, 6X, 6Y]
-Player adds the set [7W, 7X, 7Y]
+Player replaces the set [5Y, 6Y, 7Y, 8Y, 9Y] with [7W, 7X, 7Y]
 Player adds the set [8Y, 9Y, 10Y]
 
 Although this order of operations keeps all the sets in a valid state, it is not
