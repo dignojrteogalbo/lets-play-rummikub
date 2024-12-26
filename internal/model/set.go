@@ -16,9 +16,9 @@ var (
 
 type (
 	Set interface {
-		Insert(p Piece) error
-		Remove(p Piece) error
-		Split(p Piece) (Set, error)
+		Insert(p Piece, index int) (Set, error)
+		Remove(index int) (Set, Piece, error)
+		Split(index int) (Set, Set, error)
 		String() string
 		Piece(index int) (Piece, error)
 		Clone() Set
@@ -86,6 +86,9 @@ func isGroup(s *set) bool {
 }
 
 func isRun(s *set) bool {
+	if len(s.tiles) < 3 {
+		return false
+	}
 	startPiece := s.tiles[0]
 	var previous, current Piece
 	for _, piece := range s.tiles {
@@ -108,6 +111,18 @@ func isValidSet(s *set) bool {
 		return false
 	}
 	return isGroup(s) || isRun(s)
+}
+
+func (s *set) findIndex(piece Piece) int {
+	if s == nil || len(s.tiles) == 0 || !isValidPiece(piece) {
+		return -1
+	}
+	for index, p := range s.tiles {
+		if piece.IsSamePiece(p) {
+			return index
+		}
+	}
+	return -1
 }
 
 //region set manipulation
@@ -133,110 +148,45 @@ func (s *set) cloneTiles() []Piece {
 
 //region insert set
 
-func (s *set) insertIntoGroup(piece Piece) error {
-	if len(s.tiles) == 4 {
-		return errors.New(CannotInsert)
+func (s *set) Insert(piece Piece, index int) (Set, error) {
+	if len(s.tiles) != 0 && s.findIndex(piece) >= 0 {
+		return nil, errors.New(InvalidPiece)
 	}
-	if !piece.IsSameValue(s.tiles[0]) {
-		return errors.New(WrongValueForGroup)
-	}
-	s.insertPiece(piece, len(s.tiles))
-	return nil
-}
-
-func (s *set) insertIntoRun(piece Piece) error {
-	if !piece.IsSameColor(s.tiles[0]) {
-		return errors.New(WrongColorForRun)
-	}
-	if first := s.tiles[0]; piece.Value()+1 == first.Value() {
-		s.insertPiece(piece, 0)
-		return nil
-	}
-	if last := s.tiles[len(s.tiles)-1]; piece.Value()-1 == last.Value() {
-		s.insertPiece(piece, len(s.tiles))
-		return nil
-	}
-	return errors.New(CannotInsert)
-}
-
-func (s *set) Insert(piece Piece) error {
-	if !isValidPiece(piece) {
-		return errors.New(InvalidPiece)
-	}
-	if isGroup(s) {
-		return s.insertIntoGroup(piece)
-	} else if isRun(s) {
-		return s.insertIntoRun(piece)
-	}
-	return errors.New(InvalidSet)
+	clone := &set{tiles: s.cloneTiles()}
+	clone.insertPiece(piece, index)
+	return clone, nil
 }
 
 //region remove set
 
-func (s *set) Remove(piece Piece) error {
-	if len(s.tiles) <= 3 {
-		return errors.New(TooFewPieces)
+func (s *set) Remove(index int) (Set, Piece, error) {
+	if index < 0 || index >= len(s.tiles) {
+		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
 	}
-	clone := s.cloneTiles()
-	index := -1
-	for i, p := range s.tiles {
-		if piece.IsSamePiece(p) {
-			index = i
-			break
-		}
+	if len(s.tiles) == 0 {
+		return nil, nil, errors.New(InvalidSet)
 	}
-	if index < 0 {
-		return errors.New(InvalidPiece)
-	}
-	remove := &set{tiles: clone}
-	remove.removePiece(index)
-	if !isValidSet(remove) {
-		return errors.New(InvalidSet)
-	}
-	s.tiles = remove.tiles
-	return nil
+	clone := &set{tiles: s.cloneTiles()}
+	piece := clone.tiles[index]
+	clone.removePiece(index)
+	return clone, piece, nil
 }
 
 //region split set
 
-func (s *set) splitSet(piece Piece, index int) Set {
-	s.insertPiece(piece, index)
+func (s *set) Split(index int) (Set, Set, error) {
+	if index < 0 || index >= len(s.tiles) {
+		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles)-1))
+	}
+	if len(s.tiles) < 2 {
+		return nil, nil, errors.New(TooFewPieces)
+	}
 	clone := s.cloneTiles()
-	s.tiles = clone[:index+1]
-	return &set{tiles: clone[index+1:]}
-}
-
-func (s *set) Split(piece Piece) (Set, error) {
-	if !isRun(s) {
-		return nil, errors.New(CannotSplit)
-	}
-	if len(s.tiles) < 5 {
-		return nil, errors.New(TooFewPieces)
-	}
-	index := -1
-	for i, p := range s.tiles {
-		if piece.IsSameValue(p) && piece.IsSameColor(p) {
-			index = i
-			break
-		}
-	}
-	if index < 0 {
-		return nil, errors.New(InvalidPiece)
-	} else if index < 2 || len(s.tiles)-index+1 < 3 {
-		return nil, errors.New(TooFewPieces)
-	}
-	return s.splitSet(piece, index), nil
+	return &set{tiles: clone[:index]}, &set{tiles: clone[index+1:]}, nil
 }
 
 //region combine set
 
-func Combine(pieces ...Piece) (Set, error) {
-	if len(pieces) < 3 {
-		return nil, errors.New(TooFewPieces)
-	}
-	combined := &set{tiles: pieces}
-	if !isValidSet(combined) {
-		return nil, errors.New(InvalidSet)
-	}
-	return combined, nil
+func Combine(pieces ...Piece) Set {
+	return &set{tiles: pieces}
 }

@@ -124,91 +124,91 @@ func (p *player) promptForSet(game Game) (Set, error) {
 	return set, nil
 }
 
-func (p *player) insert(game Game) error {
-	set, err := p.promptForSet(game)
-	if err != nil {
-		return err
-	}
-	piece, err := p.promptForPiece(nil)
-	if err != nil {
-		return err
-	}
-	if err := set.Insert(piece); err != nil {
-		return err
-	}
-	p.removePiece(piece)
-	return nil
-}
+// func (p *player) insert(game Game) error {
+// 	set, err := p.promptForSet(game)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	piece, err := p.promptForPiece(nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if err := set.Insert(piece); err != nil {
+// 		return err
+// 	}
+// 	p.removePiece(piece)
+// 	return nil
+// }
 
-func (player *player) combine(game Game) error {
-	pieces := make([]Piece, 0)
-	originalBoard := game.CloneBoard()
-	for {
-		fmt.Print("Select a piece <r#|s#,#|done> : ")
-		input, err := Reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		input = strings.TrimSpace(input)
-		if input == "done" {
-			break
-		}
-		piece, err := player.selectPiece(input, game)
-		if err != nil {
-			game.SetBoard(originalBoard)
-			return err
-		}
-		pieces = append(pieces, piece)
-		fmt.Printf("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
-	}
-	set, err := Combine(pieces...)
-	if err != nil {
-		game.SetBoard(originalBoard)
-		return err
-	}
-	player.removePiece(pieces...)
-	game.AddSet(set)
-	return nil
-}
+// func (player *player) combine(game Game) error {
+// 	pieces := make([]Piece, 0)
+// 	originalBoard := game.CloneBoard()
+// 	for {
+// 		fmt.Print("Select a piece <r#|s#,#|done> : ")
+// 		input, err := Reader.ReadString('\n')
+// 		if err != nil {
+// 			return err
+// 		}
+// 		input = strings.TrimSpace(input)
+// 		if input == "done" {
+// 			break
+// 		}
+// 		piece, err := player.selectPiece(input, game)
+// 		if err != nil {
+// 			game.SetBoard(originalBoard)
+// 			return err
+// 		}
+// 		pieces = append(pieces, piece)
+// 		fmt.Printf("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
+// 	}
+// 	set, err := Combine(pieces...)
+// 	if err != nil {
+// 		game.SetBoard(originalBoard)
+// 		return err
+// 	}
+// 	player.removePiece(pieces...)
+// 	game.AddSet(set)
+// 	return nil
+// }
 
-func (player *player) split(game Game) error {
-	set, err := player.promptForSet(game)
-	if err != nil {
-		return err
-	}
-	piece, err := player.promptForPiece(nil)
-	if err != nil {
-		return err
-	}
-	splitSet, err := set.Split(piece)
-	if err != nil {
-		return err
-	}
-	game.AddSet(splitSet)
-	player.removePiece(piece)
-	return nil
-}
+// func (player *player) split(game Game) error {
+// 	set, err := player.promptForSet(game)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	piece, err := player.promptForPiece(nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	splitSet, err := set.Split(piece)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	game.AddSet(splitSet)
+// 	player.removePiece(piece)
+// 	return nil
+// }
 
 func parseCommand(input string, successfulMoves *uint16, player *player, game Game) {
 	switch input {
-	case "combine":
-		if err := player.combine(game); err != nil {
-			fmt.Println(err)
-		} else {
-			*successfulMoves++
-		}
-	case "insert":
-		if err := player.insert(game); err != nil {
-			fmt.Println(err)
-		} else {
-			*successfulMoves++
-		}
-	case "split":
-		if err := player.split(game); err != nil {
-			fmt.Println(err)
-		} else {
-			*successfulMoves++
-		}
+	// case "combine":
+	// 	if err := player.combine(game); err != nil {
+	// 		fmt.Println(err)
+	// 	} else {
+	// 		*successfulMoves++
+	// 	}
+	// case "insert":
+	// 	if err := player.insert(game); err != nil {
+	// 		fmt.Println(err)
+	// 	} else {
+	// 		*successfulMoves++
+	// 	}
+	// case "split":
+	// 	if err := player.split(game); err != nil {
+	// 		fmt.Println(err)
+	// 	} else {
+	// 		*successfulMoves++
+	// 	}
 	case "help":
 		fmt.Println("combine <r#|s#,#> <r#|s#,#> ... <r#|s#,#>")
 		fmt.Println("insert <set> <piece>")
@@ -278,8 +278,8 @@ func selectSetPiece(selection string, game Game) (Piece, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := set.Remove(piece); err != nil {
-		return nil, err
-	}
+	// if err := set.Remove(piece); err != nil {
+	// 	return nil, err
+	// }
 	return piece, nil
 }
