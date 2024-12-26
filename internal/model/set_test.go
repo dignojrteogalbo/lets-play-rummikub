@@ -118,11 +118,33 @@ func TestIsRun(t *testing.T) {
 	})
 }
 
+func TestFindIndex(t *testing.T) {
+	t.Run("ShouldReturnIndex", func(t *testing.T) {
+		piece := NewPiece(Value(3), ColorGreen)
+		search := &set{tiles: []Piece{NewPiece(Value(8), ColorBlue), NewPiece(Value(3), ColorGreen), piece}}
+		index := search.findIndex(piece)
+		assert.Equal(t, index, 2)
+		assert.Same(t, search.tiles[index], piece)
+	})
+	t.Run("ShouldReturnInvalidOnNotExistingPiece", func(t *testing.T) {
+		piece := NewPiece(Value(3), ColorGreen)
+		search := &set{tiles: []Piece{NewPiece(Value(8), ColorBlue), NewPiece(Value(3), ColorGreen)}}
+		index := search.findIndex(piece)
+		assert.Negative(t, index)
+	})
+	t.Run("ShouldReturnInvalidOnEmptySet", func(t *testing.T) {
+		piece := NewPiece(Value(3), ColorGreen)
+		search := new(set)
+		index := search.findIndex(piece)
+		assert.Negative(t, index)
+	})
+}
+
 func TestInsertPiece(t *testing.T) {
 	t.Run("ShouldInsertIntoEmptySet", func(t *testing.T) {
 		emptySet := new(set)
 		piece := NewPiece(Value(8), ColorBlack)
-		emptySet.insertPiece(piece, -1)
+		emptySet.insertPiece(piece, 0)
 		assert.Len(t, emptySet.tiles, 1)
 		assert.Same(t, emptySet.tiles[0], piece)
 	})
@@ -186,5 +208,59 @@ func TestInsert(t *testing.T) {
 		inserted, err := set.Insert(piece, 1)
 		assert.EqualError(t, err, InvalidPiece)
 		assert.Nil(t, inserted)
+	})
+}
+
+func TestRemovePiece(t *testing.T) {
+	t.Run("ShouldRemoveFromStart", func(t *testing.T) {
+		remainingPiece := NewPiece(Value(8), ColorBlue)
+		set := &set{tiles: []Piece{NewPiece(Value(5), ColorBlack), remainingPiece}}
+		set.removePiece(0)
+		assert.Len(t, set.tiles, 1)
+		assert.Same(t, set.tiles[0], remainingPiece)
+	})
+	t.Run("ShouldRemoveFromMiddle", func(t *testing.T) {
+		startPiece, endPiece := NewPiece(Value(2), ColorGreen), NewPiece(Value(8), ColorBlue)
+		set := &set{tiles: []Piece{startPiece, NewPiece(Value(5), ColorBlack), endPiece}}
+		set.removePiece(1)
+		assert.Len(t, set.tiles, 2)
+		assert.Same(t, set.tiles[0], startPiece)
+		assert.Same(t, set.tiles[1], endPiece)
+	})
+	t.Run("ShouldRemoveFromEnd", func(t *testing.T) {
+		startPiece, middlePiece := NewPiece(Value(2), ColorGreen), NewPiece(Value(8), ColorBlue)
+		set := &set{tiles: []Piece{startPiece, middlePiece, NewPiece(Value(5), ColorBlack)}}
+		set.removePiece(2)
+		assert.Len(t, set.tiles, 2)
+		assert.Same(t, set.tiles[0], startPiece)
+		assert.Same(t, set.tiles[1], middlePiece)
+	})
+}
+
+func TestRemove(t *testing.T) {
+	t.Run("ShouldRemovePiece", func(t *testing.T) {
+		piece := NewPiece(Value(12), ColorRed)
+		original := &set{tiles: []Piece{piece}}
+		removed, err := original.Remove(piece)
+		assert.Len(t, original.tiles, 1)
+		assert.NoError(t, err)
+		assert.NotNil(t, removed)
+		assert.Empty(t, removed.(*set).tiles)
+	})
+	t.Run("ShouldReturnErrorOnEmptySet", func(t *testing.T) {
+		piece := NewPiece(Value(12), ColorRed)
+		emptySet := new(set)
+		removed, err := emptySet.Remove(piece)
+		assert.Empty(t, emptySet.tiles)
+		assert.EqualError(t, err, InvalidSet)
+		assert.Nil(t, removed)
+	})
+	t.Run("ShouldReturnErrorOnNotExistingPiece", func(t *testing.T) {
+		piece := NewPiece(Value(12), ColorRed)
+		original := &set{tiles: []Piece{NewPiece(Value(10), ColorBlack)}}
+		removed, err := original.Remove(piece)
+		assert.Len(t, original.tiles, 1)
+		assert.EqualError(t, err, InvalidPiece)
+		assert.Nil(t, removed)
 	})
 }

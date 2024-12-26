@@ -17,7 +17,7 @@ var (
 type (
 	Set interface {
 		Insert(p Piece, index int) (Set, error)
-		Remove(index int) (Set, Piece, error)
+		Remove(p Piece) (Set, error)
 		Split(index int) (Set, Set, error)
 		String() string
 		Piece(index int) (Piece, error)
@@ -128,10 +128,6 @@ func (s *set) findIndex(piece Piece) int {
 //region set manipulation
 
 func (s *set) insertPiece(piece Piece, index int) {
-	if len(s.tiles) == 0 {
-		s.tiles = []Piece{piece}
-		return
-	}
 	if index == len(s.tiles) {
 		s.tiles = append(s.tiles, piece)
 	} else {
@@ -166,17 +162,17 @@ func (s *set) Insert(piece Piece, index int) (Set, error) {
 
 //region remove set
 
-func (s *set) Remove(index int) (Set, Piece, error) {
-	if index < 0 || index >= len(s.tiles) {
-		return nil, nil, errors.New(IndexOutOfBounds(len(s.tiles) - 1))
-	}
+func (s *set) Remove(piece Piece) (Set, error) {
 	if len(s.tiles) == 0 {
-		return nil, nil, errors.New(InvalidSet)
+		return nil, errors.New(InvalidSet)
+	}
+	var index int
+	if index = s.findIndex(piece); index < 0 {
+		return nil, errors.New(InvalidPiece)
 	}
 	clone := &set{tiles: s.cloneTiles()}
-	piece := clone.tiles[index]
 	clone.removePiece(index)
-	return clone, piece, nil
+	return clone, nil
 }
 
 //region split set
