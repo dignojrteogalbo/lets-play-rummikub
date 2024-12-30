@@ -26,6 +26,7 @@ type (
 		PrintBoard()
 		TakePiece() Piece
 		Piece(index int) Piece
+		AddLoosePiece(piece Piece)
 		RemovePieces(piece ...Piece)
 		SetBoard(game Game)
 		IsValidBoard() bool
@@ -126,9 +127,11 @@ func (g *instance) Piece(index int) Piece {
 	if len(g.loose) == 0 || index < 0 || index >= len(g.loose) {
 		return nil
 	}
-	piece := g.loose[index]
-	g.loose = append(g.loose[:index], g.loose[index+1:]...)
-	return piece
+	return g.loose[index]
+}
+
+func (g *instance) AddLoosePiece(piece Piece) {
+	g.loose = append(g.loose, piece)
 }
 
 func (g *instance) RemovePieces(pieces ...Piece) {
@@ -154,6 +157,9 @@ func (g *instance) ReplaceSet(existing, replace Set) {
 	for index, set := range g.board {
 		if set == existing {
 			g.board[index] = replace
+			if replace.Len() == 0 {
+				g.board = append(g.board[:index], g.board[index+1:]...)
+			}
 			return
 		}
 	}

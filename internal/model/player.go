@@ -53,7 +53,7 @@ func (player *player) StartTurn(game Game) {
 				break
 			}
 		}
-		player.parseCommand(command, game)
+		player.parseCommand(command, game, &successfulMeld)
 	}
 }
 
@@ -74,34 +74,6 @@ func (player *player) removePiece(pieces ...Piece) {
 			}
 		}
 	}
-}
-
-func (p *player) promptForPiece(set Set) (Piece, error) {
-	if set != nil {
-		fmt.Println(set.String())
-		fmt.Print("Select piece from set: ")
-	} else {
-		fmt.Print("Select piece from rack: ")
-	}
-	input, err := Reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
-	input = strings.TrimSpace(input)
-	pieceIndex, err := parseInt(input)
-	if err != nil {
-		return nil, err
-	}
-	var piece Piece
-	if set != nil {
-		piece, err = set.Piece(pieceIndex)
-	} else {
-		piece, err = p.Piece(pieceIndex)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return piece, nil
 }
 
 func (p *player) promptForSet(game Game) (Set, error) {
@@ -182,43 +154,86 @@ func (player *player) combine(game Game) error {
 	return nil
 }
 
-// func (player *player) split(game Game) error {
-// 	set, err := player.promptForSet(game)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	piece, err := player.promptForPiece(nil)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	splitSet, err := set.Split(piece)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	game.AddSet(splitSet)
-// 	player.removePiece(piece)
-// 	return nil
-// }
+func (player *player) remove(game Game) error {
+	set, err := player.promptForSet(game)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Select index [0, %d] : ", set.Len())
+	input, err := Reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+	input = strings.TrimSpace(input)
+	index, err := parseInt(input)
+	if err != nil {
+		return err
+	}
+	piece, err := set.Piece(index)
+	if err != nil {
+		return err
+	}
+	remove, err := set.Remove(piece)
+	if err != nil {
+		return err
+	}
+	game.AddLoosePiece(piece)
+	game.ReplaceSet(set, remove)
+	return nil
+}
 
-func (player *player) parseCommand(input string, game Game) {
+func (player *player) split(game Game) error {
+	set, err := player.promptForSet(game)
+	if err != nil {
+		return err
+	}
+	if set.Len() < 2 {
+		return errors.New(CannotSplit)
+	}
+	fmt.Printf("Select index [1, %d] : ", set.Len())
+	input, err := Reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+	input = strings.TrimSpace(input)
+	index, err := parseInt(input)
+	if err != nil {
+		return err
+	}
+	lowerSet, upperSet, err := set.Split(index)
+	if err != nil {
+		return err
+	}
+	game.ReplaceSet(set, lowerSet)
+	game.AddSet(upperSet)
+	return nil
+}
+
+func (player *player) parseCommand(input string, game Game, successfulMeld *uint16) {
 	switch input {
 	case "done":
 	case "combine":
 		if err := player.combine(game); err != nil {
 			fmt.Println(err)
+		} else if game.IsValidBoard() {
+			*successfulMeld++
+		}
+	case "split":
+		if err := player.split(game); err != nil {
+			fmt.Println(err)
 		}
 	case "insert":
 		if err := player.insert(game); err != nil {
 			fmt.Println(err)
+		} else if game.IsValidBoard() {
+			*successfulMeld++
 		}
-	// case "split":
-	// 	if err := player.split(game); err != nil {
-	// 		fmt.Println(err)
-	// 	}
+	case "remove":
+		if err := player.remove(game); err != nil {
+			fmt.Println(err)
+		}
 	case "help":
-		fmt.Println("combine <r#|s#,#> <r#|s#,#> ... <r#|s#,#>")
-		fmt.Println("insert <set> <piece>")
-		fmt.Println("split <set> <piece>")
+		fmt.Println("valid commands are: combine, split, insert, remove, help, done")
 	default:
 		fmt.Println("invalid command")
 	}
