@@ -43,26 +43,26 @@ func TestClone(t *testing.T) {
 func TestIsValidSet(t *testing.T) {
 	t.Run("ShouldReturnTrueOnGroup", func(t *testing.T) {
 		group := &set{tiles: createGroupTiles(t, 3, Value(10))}
-		result := isValidSet(group)
+		result := group.IsValidSet()
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnTrueOnRun", func(t *testing.T) {
 		run := &set{tiles: createRunTiles(t, 3, 9, ColorGreen)}
-		result := isValidSet(run)
+		result := run.IsValidSet()
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnFalseOnNil", func(t *testing.T) {
-		result := isValidSet(nil)
+		result := (*set)(nil).IsValidSet()
 		assert.False(t, result)
 	})
 	t.Run("ShouldReturnFalseOnTooFewPieces", func(t *testing.T) {
 		set := &set{tiles: []Piece{NewPiece(Value(7), ColorBlack)}}
-		result := isValidSet(set)
+		result := set.IsValidSet()
 		assert.False(t, result)
 	})
 	t.Run("ShouldReturnFalseOnTooManyPieces", func(t *testing.T) {
 		run := &set{tiles: createRunTiles(t, 0, 18, ColorBlue)}
-		result := isValidSet(run)
+		result := run.IsValidSet()
 		assert.False(t, result)
 	})
 }

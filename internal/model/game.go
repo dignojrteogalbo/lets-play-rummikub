@@ -19,18 +19,23 @@ type (
 		DealPieces()
 		Set(index int) (Set, error)
 		AddSet(Set)
+		ReplaceSet(existing, replace Set)
 		NextTurn()
 		IsGameOver() bool
 		Start()
 		PrintBoard()
 		TakePiece() Piece
-		SetBoard(board []Set)
-		CloneBoard() []Set
+		Piece(index int) Piece
+		RemovePieces(piece ...Piece)
+		SetBoard(game Game)
+		IsValidBoard() bool
+		CloneBoard() Game
 	}
 
 	instance struct {
 		tiles         []Piece
-		sets          []Set
+		board         []Set
+		loose         []Piece
 		players       []Player
 		currentPlayer int
 	}
@@ -63,23 +68,42 @@ func NewGame(totalPlayers uint) Game {
 		return nil
 	}
 	instance := new(instance)
-	instance.sets = make([]Set, 0)
+	instance.board = make([]Set, 0)
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
 	instance.currentPlayer = -1
 	return instance
 }
 
-func (game *instance) CloneBoard() []Set {
-	clone := make([]Set, len(game.sets))
-	for i := range game.sets {
-		clone[i] = game.sets[i].Clone()
+func (game *instance) CloneBoard() Game {
+	newGame := new(instance)
+	board := make([]Set, len(game.board))
+	for i := range game.board {
+		board[i] = game.board[i].Clone()
 	}
-	return clone
+	newGame.board = board
+	loose := make([]Piece, len(game.loose))
+	copy(loose, game.loose)
+	newGame.loose = loose
+	return newGame
 }
 
-func (game *instance) SetBoard(board []Set) {
-	game.sets = board
+func (game *instance) SetBoard(newGame Game) {
+	setInstance, ok := newGame.(*instance)
+	if !ok || setInstance == nil {
+		return
+	}
+	game.board = setInstance.board
+	game.loose = setInstance.loose
+}
+
+func (game *instance) IsValidBoard() bool {
+	for _, set := range game.board {
+		if !set.IsValidSet() {
+			return false
+		}
+	}
+	return true
 }
 
 func (g *instance) Shuffle() {
@@ -98,6 +122,26 @@ func (g *instance) TakePiece() Piece {
 	return piece
 }
 
+func (g *instance) Piece(index int) Piece {
+	if len(g.loose) == 0 || index < 0 || index >= len(g.loose) {
+		return nil
+	}
+	piece := g.loose[index]
+	g.loose = append(g.loose[:index], g.loose[index+1:]...)
+	return piece
+}
+
+func (g *instance) RemovePieces(pieces ...Piece) {
+	for _, piece := range pieces {
+		for index, p := range g.loose {
+			if piece.IsSamePiece(p) {
+				g.loose = append(g.loose[:index], g.loose[index+1:]...)
+				break
+			}
+		}
+	}
+}
+
 func (g *instance) DealPieces() {
 	for _, player := range g.players {
 		for i := 0; i < 14; i++ {
@@ -106,11 +150,20 @@ func (g *instance) DealPieces() {
 	}
 }
 
-func (g *instance) Set(index int) (Set, error) {
-	if index < 0 || index > len(g.sets)-1 {
-		return nil, errors.New(IndexOutOfBounds(-1, len(g.sets), "set"))
+func (g *instance) ReplaceSet(existing, replace Set) {
+	for index, set := range g.board {
+		if set == existing {
+			g.board[index] = replace
+			return
+		}
 	}
-	return g.sets[index], nil
+}
+
+func (g *instance) Set(index int) (Set, error) {
+	if index < 0 || index > len(g.board)-1 {
+		return nil, errors.New(IndexOutOfBounds(-1, len(g.board), "set"))
+	}
+	return g.board[index], nil
 }
 
 func (g *instance) NextTurn() {
@@ -130,10 +183,15 @@ func (g *instance) IsGameOver() bool {
 
 func (g *instance) PrintBoard() {
 	fmt.Println("=== Board ===")
-	for i, s := range g.sets {
+	for i, s := range g.board {
 		fmt.Printf("--- [%d] ---\n%s", i, s.String())
 	}
 	fmt.Println("=== Board ===")
+	fmt.Println("=== Loose Pieces ===")
+	for i, p := range g.loose {
+		fmt.Printf("[%d] %s\n", i, p.String())
+	}
+	fmt.Println("=== Loose Pieces ===")
 }
 
 func (g *instance) PrintScores() {
@@ -152,7 +210,7 @@ func (g *instance) PrintScores() {
 }
 
 func (g *instance) AddSet(set Set) {
-	g.sets = append(g.sets, set)
+	g.board = append(g.board, set)
 }
 
 func (g *instance) Start() {

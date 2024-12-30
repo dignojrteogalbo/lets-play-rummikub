@@ -5,23 +5,16 @@ import (
 	"fmt"
 )
 
-var (
-	ansiColors = map[Color]int{
-		ColorBlack: 37,
-		ColorBlue:  35,
-		ColorRed:   31,
-		ColorGreen: 32,
-	}
-)
-
 type (
 	Set interface {
+		Len() int
 		Insert(p Piece, index int) (Set, error)
 		Remove(p Piece) (Set, error)
 		Split(index int) (Set, Set, error)
 		String() string
 		Piece(index int) (Piece, error)
 		Clone() Set
+		IsValidSet() bool
 	}
 
 	set struct {
@@ -29,14 +22,17 @@ type (
 	}
 )
 
+func (s *set) Len() int {
+	if s == nil {
+		return 0
+	}
+	return len(s.tiles)
+}
+
 func (s *set) String() string {
 	var output string
 	for i, t := range s.tiles {
-		if t.IsJoker() {
-			output = output + fmt.Sprintf("[%d] (Joker)\n", i)
-		} else {
-			output = output + fmt.Sprintf("[%d] (\x1b[%dm%d\x1b[0m)\n", i, ansiColors[t.Color()], t.Value())
-		}
+		output = output + fmt.Sprintf("[%d] %s\n", i, t.String())
 	}
 	return output
 }
@@ -106,7 +102,7 @@ func isRun(s *set) bool {
 	return true
 }
 
-func isValidSet(s *set) bool {
+func (s *set) IsValidSet() bool {
 	if s == nil || len(s.tiles) < 3 || len(s.tiles) > 13 {
 		return false
 	}

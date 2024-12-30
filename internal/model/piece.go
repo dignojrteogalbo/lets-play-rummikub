@@ -1,11 +1,22 @@
 package model
 
+import "fmt"
+
 const (
 	ValueJoker Value = iota
 	ColorBlack Color = iota
 	ColorBlue
 	ColorRed
 	ColorGreen
+)
+
+var (
+	ansiColors = map[Color]int{
+		ColorBlack: 37,
+		ColorBlue:  35,
+		ColorRed:   31,
+		ColorGreen: 32,
+	}
 )
 
 type (
@@ -19,6 +30,7 @@ type (
 		IsSamePiece(Piece) bool
 		Value() Value
 		Color() Color
+		String() string
 	}
 
 	piece struct {
@@ -91,4 +103,14 @@ func (p *piece) Color() Color {
 		return 0
 	}
 	return p.color
+}
+
+func (p *piece) String() string {
+	if !isValidPiece(p) {
+		return "invalid piece"
+	}
+	if p.IsJoker() {
+		return "(Joker)"
+	}
+	return fmt.Sprintf("(\x1b[%dm%d\x1b[0m)", ansiColors[p.Color()], p.Value())
 }

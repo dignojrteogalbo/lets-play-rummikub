@@ -9,6 +9,7 @@ const (
 	InvalidPieceSelection   = string("invalid piece selection")
 	InvalidSetSelection     = string("invalid set selection")
 	InvalidNumberInput      = string("invalid input is not a number")
+	InvalidBoard            = string("board is invalid")
 	TooFewPieces            = string("not enough pieces to create set")
 	CannotInsert            = string("piece cannot be inserted into set")
 	CannotSplit             = string("set cannot be split")

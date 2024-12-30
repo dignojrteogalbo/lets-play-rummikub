@@ -15,11 +15,6 @@ func TestScore(t *testing.T) {
 	assert.Equal(t, score, uint16(15))
 }
 
-func TestTotalMoves(t *testing.T) {
-	player := &player{totalMoves: 73}
-	assert.Equal(t, player.TotalMoves(), uint16(73))
-}
-
 func TestDealPiece(t *testing.T) {
 	t.Run("ShouldAddPieceToRack", func(t *testing.T) {
 		player := new(player)
@@ -166,12 +161,12 @@ func TestPromptForPiece(t *testing.T) {
 func TestPromptForSet(t *testing.T) {
 	player := new(player)
 	set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-	game := &instance{sets: []Set{set}}
+	game := &instance{board: []Set{set}}
 	t.Run("ShouldReturnSet", func(t *testing.T) {
 		readFromStringInput(t, "0\n")
 		selection, err := player.promptForSet(game)
 		assert.NoError(t, err)
-		assert.Same(t, selection, game.sets[0])
+		assert.Same(t, selection, game.board[0])
 	})
 	t.Run("ShouldReturnErrorOnBadInput", func(t *testing.T) {
 		readFromStringInput(t, "bad input\n")
@@ -195,7 +190,7 @@ func TestPromptForSet(t *testing.T) {
 
 func TestSetPrompt(t *testing.T) {
 	set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-	game := &instance{sets: []Set{set}}
+	game := &instance{board: []Set{set}}
 	player := new(player)
 	t.Run("ShouldReturnSet", func(t *testing.T) {
 		readFromStringInput(t, "0\n")
@@ -269,102 +264,120 @@ func TestSetPrompt(t *testing.T) {
 // 	})
 // }
 
-// func TestPlayerInsert(t *testing.T) {
-// 	t.Run("ShouldInsertIntoSet", func(t *testing.T) {
-// 		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-// 		game := &instance{sets: []Set{set}}
-// 		player := &player{rack: []Piece{NewPiece(Value(4), ColorGreen)}}
-// 		readFromStringInput(t, "0\n0\n")
-// 		err := player.insert(game)
-// 		assert.NoError(t, err)
-// 		assert.Empty(t, player.rack)
-// 		assert.Len(t, set.tiles, 4)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadSetSelection", func(t *testing.T) {
-// 		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-// 		game := &instance{sets: []Set{set}}
-// 		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
-// 		readFromStringInput(t, "2\n")
-// 		err := player.insert(game)
-// 		assert.Error(t, err)
-// 		assert.Len(t, player.rack, 1)
-// 		assert.Len(t, set.tiles, 3)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadPieceSelection", func(t *testing.T) {
-// 		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-// 		game := &instance{sets: []Set{set}}
-// 		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
-// 		readFromStringInput(t, "0\n4\n")
-// 		err := player.insert(game)
-// 		assert.Error(t, err)
-// 		assert.Len(t, player.rack, 1)
-// 		assert.Len(t, set.tiles, 3)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadInsert", func(t *testing.T) {
-// 		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
-// 		game := &instance{sets: []Set{set}}
-// 		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
-// 		readFromStringInput(t, "0\n0\n")
-// 		err := player.insert(game)
-// 		assert.Error(t, err)
-// 		assert.Len(t, player.rack, 1)
-// 		assert.Len(t, set.tiles, 3)
-// 	})
-// }
+func TestPlayerInsert(t *testing.T) {
+	t.Run("ShouldInsertIntoSet", func(t *testing.T) {
+		existingSet := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{existingSet}}
+		player := &player{rack: []Piece{NewPiece(Value(4), ColorGreen)}}
+		readFromStringInput(t, "0\nr0\n3\n")
+		err := player.insert(game)
+		assert.NoError(t, err)
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.board, 1)
+		assert.Len(t, game.board[0].(*set).tiles, 4)
+		assert.NotSame(t, existingSet, game.board[0])
+	})
+	t.Run("ShouldReturnErrorOnBadSetSelection", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "2\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnErrorPieceSelection", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "0\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadPieceSelection", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "0\n0\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnErrorIndexSelection", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "0\nr0\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadIndexSelection", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "0\nr0\nbad\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadInsert", func(t *testing.T) {
+		set := &set{tiles: createRunTiles(t, 1, 3, ColorGreen)}
+		game := &instance{board: []Set{set}}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorGreen)}}
+		readFromStringInput(t, "0\nr0\n-1\n")
+		err := player.insert(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 1)
+		assert.Len(t, set.tiles, 3)
+	})
+}
 
-// func TestPlayerCombine(t *testing.T) {
-// 	t.Run("ShouldCombinePiecesFromRack", func(t *testing.T) {
-// 		game := new(instance)
-// 		player := &player{rack: createRunTiles(t, 1, 5, ColorBlue)}
-// 		readFromStringInput(t, "r0\nr1\nr2\nr3\nr4\ndone\n")
-// 		err := player.combine(game)
-// 		assert.NoError(t, err)
-// 		assert.Empty(t, player.rack)
-// 		assert.Len(t, game.sets, 1)
-// 		assert.Len(t, game.sets[0].(*set).tiles, 5)
-// 	})
-// 	t.Run("ShouldCombinePiecesFromRackAndBoard", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 4, ColorRed)}
-// 		game := &instance{sets: []Set{run}}
-// 		player := &player{rack: []Piece{NewPiece(Value(5), ColorRed), NewPiece(Value(6), ColorRed)}}
-// 		readFromStringInput(t, "s0,3\nr0\nr1\ndone\n")
-// 		err := player.combine(game)
-// 		assert.NoError(t, err)
-// 		assert.Empty(t, player.rack)
-// 		assert.Len(t, game.sets, 2)
-// 		assert.Len(t, game.sets[0].(*set).tiles, 3)
-// 		assert.Len(t, game.sets[1].(*set).tiles, 3)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadPiece", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 3, ColorRed)}
-// 		game := &instance{sets: []Set{run}}
-// 		player := &player{rack: []Piece{NewPiece(Value(4), ColorRed), NewPiece(Value(5), ColorRed)}}
-// 		readFromStringInput(t, "s0,2\nr0\nr1\ndone\n")
-// 		err := player.combine(game)
-// 		assert.Error(t, err)
-// 		assert.Len(t, player.rack, 2)
-// 		assert.Len(t, game.sets, 1)
-// 		assert.Len(t, game.sets[0].(*set).tiles, 3)
-// 	})
-// 	t.Run("ShouldReturnErrorOnBadCombine", func(t *testing.T) {
-// 		run := &set{tiles: createRunTiles(t, 1, 4, ColorRed)}
-// 		game := &instance{sets: []Set{run}}
-// 		player := &player{rack: []Piece{NewPiece(Value(5), ColorRed), NewPiece(Value(7), ColorRed)}}
-// 		readFromStringInput(t, "s0,3\nr0\nr1\ndone\n")
-// 		err := player.combine(game)
-// 		assert.Error(t, err)
-// 		assert.Len(t, player.rack, 2)
-// 		assert.Len(t, game.sets, 1)
-// 		assert.Len(t, game.sets[0].(*set).tiles, 4)
-// 	})
-// 	t.Run("ShouldReturnErrorOnReaderError", func(t *testing.T) {
-// 		player := new(player)
-// 		game := new(instance)
-// 		readerError(t)
-// 		err := player.combine(game)
-// 		assert.Error(t, err)
-// 	})
-// }
+func TestPlayerCombine(t *testing.T) {
+	t.Run("ShouldCombinePiecesFromRack", func(t *testing.T) {
+		game := new(instance)
+		player := &player{rack: createRunTiles(t, 1, 5, ColorBlue)}
+		readFromStringInput(t, "r0\nr1\nr2\nr3\nr4\ndone\n")
+		err := player.combine(game)
+		assert.NoError(t, err)
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.board, 1)
+		assert.Len(t, game.board[0].(*set).tiles, 5)
+	})
+	t.Run("ShouldCombinePiecesFromRackAndBoard", func(t *testing.T) {
+		game := &instance{loose: createRunTiles(t, 1, 4, ColorRed)}
+		player := &player{rack: []Piece{NewPiece(Value(5), ColorRed), NewPiece(Value(6), ColorRed)}}
+		readFromStringInput(t, "p3\nr0\nr1\ndone\n")
+		err := player.combine(game)
+		assert.NoError(t, err)
+		assert.Empty(t, player.rack)
+		assert.Len(t, game.board, 1)
+		assert.Len(t, game.board[0].(*set).tiles, 3)
+		assert.Len(t, game.loose, 3)
+	})
+	t.Run("ShouldReturnErrorOnBadPiece", func(t *testing.T) {
+		game := &instance{loose: createRunTiles(t, 1, 3, ColorRed)}
+		player := &player{rack: []Piece{NewPiece(Value(4), ColorRed), NewPiece(Value(5), ColorRed)}}
+		readFromStringInput(t, "r0\nr1\np3\ndone\n")
+		err := player.combine(game)
+		assert.Error(t, err)
+		assert.Len(t, player.rack, 2)
+		assert.Len(t, game.loose, 3)
+	})
+	t.Run("ShouldReturnErrorOnReaderError", func(t *testing.T) {
+		game := new(instance)
+		player := new(player)
+		readerError(t)
+		err := player.combine(game)
+		assert.Error(t, err)
+	})
+}
 
 // func TestPlayerSplit(t *testing.T) {
 // 	t.Run("ShouldSplitRun", func(t *testing.T) {
