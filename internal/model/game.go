@@ -2,8 +2,10 @@ package model
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"lets-play-rummikub/internal/event"
 	"lets-play-rummikub/internal/history"
 	"math/rand"
 	"os"
@@ -21,29 +23,50 @@ type (
 		Set(index int) (Set, error)
 		AddSet(Set)
 		ReplaceSet(existing, replace Set)
-		NextTurn()
-		IsGameOver() bool
-		Start()
+		Start(event.Listener)
 		PrintBoard()
 		TakePiece() Piece
 		Piece(index int) Piece
 		AddLoosePiece(piece Piece)
 		RemovePieces(piece ...Piece)
 		IsValidBoard() bool
+		CurrentPlayer() Player
+		Player(index int) Player
+		TotalPlayers() int
+		MarshalJSON() ([]byte, error)
+		Notify()
 		history.History
 		history.Cloneable
 	}
 
 	instance struct {
+		event.Listener
 		firstMeldComplete bool
-		tiles         []Piece
-		board         []Set
-		loose         []Piece
-		players       []Player
-		currentPlayer int
+		tiles             []Piece
+		board             []Set
+		loose             []Piece
+		players           []Player
+		currentPlayer     int
 		history.History
 	}
 )
+
+func (g *instance) Notify() {
+	if g.Listener != nil {
+		g.Listener.Notify()
+	}
+}
+
+func (g *instance) MarshalJSON() ([]byte, error) {
+	output := struct {
+		Board  []Set   `json:"board"`
+		Pieces []Piece `json:"piece"`
+	}{
+		g.board,
+		g.loose,
+	}
+	return json.Marshal(output)
+}
 
 func (g *instance) createTiles() {
 	g.tiles = make([]Piece, 106)
@@ -76,7 +99,7 @@ func NewGame(totalPlayers uint) Game {
 	instance.board = make([]Set, 0)
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
-	instance.currentPlayer = -1
+	instance.currentPlayer = 0
 	instance.History = history.NewHistory(instance)
 	return instance
 }
@@ -177,10 +200,25 @@ func (g *instance) Set(index int) (Set, error) {
 	return g.board[index], nil
 }
 
+func (g *instance) Player(index int) Player {
+	if index < 0 || index >= len(g.players) {
+		return nil
+	}
+	return g.players[index]
+}
+
+func (g *instance) CurrentPlayer() Player {
+	return g.players[g.currentPlayer]
+}
+
+func (g *instance) TotalPlayers() int {
+	return len(g.players)
+}
+
 func (g *instance) NextTurn() {
-	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
 	fmt.Printf("Player #%d's turn\n", g.currentPlayer+1)
 	g.players[g.currentPlayer].StartTurn(g)
+	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
 }
 
 func (g *instance) IsGameOver() bool {
@@ -224,7 +262,7 @@ func (g *instance) AddSet(set Set) {
 	g.board = append(g.board, set)
 }
 
-func (game *instance) restoreGameState() {
+func (game *instance) restoreGameState(listener event.Listener) {
 	currentPlayer := game.players[game.currentPlayer]
 	for {
 		moves, board := currentPlayer.Undo(), game.Undo()
@@ -253,19 +291,22 @@ func (game *instance) hasSetWithJoker() bool {
 	return false
 }
 
-func (g *instance) Start() {
+func (g *instance) Start(listener event.Listener) {
+	if g.Listener == nil && listener != nil {
+		g.Listener = listener
+	}
 	for !g.IsGameOver() {
 		g.NextTurn()
 		if !g.IsValidBoard() {
 			fmt.Println("board has invalid sets")
-			g.restoreGameState()
+			g.restoreGameState(listener)
 		} else if !g.firstMeldComplete {
 			if g.hasSetWithJoker() {
 				fmt.Println("initial meld cannot contain joker")
-				g.restoreGameState()
+				g.restoreGameState(listener)
 			} else if !g.hasSetOverThirty() {
 				fmt.Println("initial meld must sum > 30")
-				g.restoreGameState()
+				g.restoreGameState(listener)
 			} else {
 				g.firstMeldComplete = true
 			}

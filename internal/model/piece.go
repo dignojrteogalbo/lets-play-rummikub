@@ -1,6 +1,9 @@
 package model
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const (
 	ValueJoker Value = iota
@@ -17,6 +20,12 @@ var (
 		ColorRed:   31,
 		ColorGreen: 32,
 	}
+	stringColors = map[Color]string{
+		ColorBlack: "black",
+		ColorBlue:  "blue",
+		ColorRed:   "red",
+		ColorGreen: "green",
+	}
 )
 
 type (
@@ -31,6 +40,7 @@ type (
 		Value() Value
 		Color() Color
 		String() string
+		MarshalJSON() ([]byte, error)
 	}
 
 	piece struct {
@@ -38,6 +48,26 @@ type (
 		color Color
 	}
 )
+
+func (p *piece) MarshalJSON() ([]byte, error) {
+	var output any
+	if p.IsJoker() {
+		output = struct {
+			Joker bool `json:"joker"`
+		}{
+			true,
+		}
+	} else {
+		output = struct {
+			Value int    `json:"value"`
+			Color string `json:"color"`
+		}{
+			int(p.Value()),
+			stringColors[p.Color()],
+		}
+	}
+	return json.Marshal(output)
+}
 
 func NewPiece(v Value, c Color) Piece {
 	if v > 13 {

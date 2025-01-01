@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -23,6 +24,15 @@ type (
 		tiles []Piece
 	}
 )
+
+func (s *set) MarshalText() ([]byte, error) {
+	output := struct {
+		Pieces []Piece `json:"pieces"`
+	}{
+		s.tiles,
+	}
+	return json.Marshal(output)
+}
 
 func (s *set) Len() int {
 	if s == nil {

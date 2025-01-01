@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"lets-play-rummikub/internal/history"
@@ -13,15 +14,31 @@ type (
 		DealPiece(Piece)
 		StartTurn(game Game)
 		Score() uint16
+		Message(message string)
+		MarshalJSON() ([]byte, error)
 		history.Cloneable
 		history.History
 	}
 
 	player struct {
 		rack []Piece
+		messages chan string
 		history.History
 	}
 )
+
+func (p *player) MarshalJSON() ([]byte, error) {
+	output := struct {
+		Rack []Piece `json:"rack"`
+	}{
+		p.rack,
+	}
+	return json.Marshal(output)
+}
+
+func (p *player) Message(m string) {
+	p.messages <- m
+}
 
 func (p *player) Clone() history.Cloneable {
 	rack := make([]Piece, len(p.rack))
@@ -41,6 +58,7 @@ func NewPlayer() Player {
 	instance := new(player)
 	instance.rack = make([]Piece, 0)
 	instance.History = history.NewHistory(instance)
+	instance.messages = make(chan string)
 	return instance
 }
 
@@ -61,10 +79,12 @@ func (player *player) StartTurn(game Game) {
 	for {
 		game.PrintBoard()
 		player.printRack()
+		game.Notify()
 		fmt.Println("valid commands are: combine, split, insert, remove, undo, help, done")
-		command, err := Reader.ReadString('\n')
+		// command, err := reader.ReadString('\n')
+		command := <- player.messages
 		command = strings.TrimSpace(command)
-		if err != nil || command == "done" {
+		if command == "done" {
 			if successfulMeld == 0 {
 				player.DealPiece(game.TakePiece())
 			}
@@ -117,10 +137,7 @@ func (player *player) insert(game Game) error {
 		return err
 	}
 	fmt.Print("select a piece <r#|p#> : ")
-	input, err := Reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
+	input := <- player.messages
 	input = strings.TrimSpace(input)
 	piece, err := player.selectPiece(input, game)
 	if err != nil {
@@ -149,10 +166,11 @@ func (player *player) combine(game Game) error {
 	pieces := make([]Piece, 0)
 	for {
 		fmt.Print("select a piece <r#|p#|done> : ")
-		input, err := Reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
+		input := <-player.messages
+		// input, err := Reader.ReadString('\n')
+		// if err != nil {
+		// 	return err
+		// }
 		input = strings.TrimSpace(input)
 		if input == "done" {
 			break
@@ -177,10 +195,7 @@ func (player *player) remove(game Game) error {
 		return err
 	}
 	fmt.Printf("select index [0, %d] : ", set.Len())
-	input, err := Reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
+	input := <- player.messages
 	input = strings.TrimSpace(input)
 	index, err := parseInt(input)
 	if err != nil {
@@ -208,10 +223,7 @@ func (player *player) split(game Game) error {
 		return errors.New(CannotSplit)
 	}
 	fmt.Printf("select index [1, %d] : ", set.Len())
-	input, err := Reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
+	input := <- player.messages
 	input = strings.TrimSpace(input)
 	index, err := parseInt(input)
 	if err != nil {
