@@ -8,6 +8,8 @@ import (
 type (
 	Set interface {
 		Len() int
+		Size() int
+		NumberOfJokers() int
 		Insert(p Piece, index int) (Set, error)
 		Remove(p Piece) (Set, error)
 		Split(index int) (Set, Set, error)
@@ -27,6 +29,24 @@ func (s *set) Len() int {
 		return 0
 	}
 	return len(s.tiles)
+}
+
+func (s *set) Size() int {
+	sum := Value(0)
+	for _, piece := range s.tiles {
+		sum = sum + piece.Value()
+	}
+	return int(sum)
+}
+
+func (s *set) NumberOfJokers() int {
+	numberOfJokers := 0
+	for _, piece := range s.tiles {
+		if piece.IsJoker() {
+			numberOfJokers = numberOfJokers + 1
+		}
+	}
+	return numberOfJokers
 }
 
 func (s *set) String() string {
@@ -108,14 +128,8 @@ func (s *set) IsValidSet() bool {
 	if s == nil || len(s.tiles) < 3 || len(s.tiles) > 13 {
 		return false
 	}
-	numberOfJokers := 0
-	for _, piece := range s.tiles {
-		if piece.IsJoker() {
-			numberOfJokers = numberOfJokers + 1
-		}
-		if numberOfJokers > 1 {
-			return false
-		}
+	if s.NumberOfJokers() > 1 {
+		return false
 	}
 	return isGroup(s) || isRun(s)
 }

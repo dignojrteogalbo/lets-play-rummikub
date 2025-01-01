@@ -35,6 +35,7 @@ type (
 	}
 
 	instance struct {
+		firstMeldComplete bool
 		tiles         []Piece
 		board         []Set
 		loose         []Piece
@@ -71,6 +72,7 @@ func NewGame(totalPlayers uint) Game {
 		return nil
 	}
 	instance := new(instance)
+	instance.firstMeldComplete = false
 	instance.board = make([]Set, 0)
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
@@ -222,9 +224,54 @@ func (g *instance) AddSet(set Set) {
 	g.board = append(g.board, set)
 }
 
+func (game *instance) restoreGameState() {
+	currentPlayer := game.players[game.currentPlayer]
+	for {
+		moves, board := currentPlayer.Undo(), game.Undo()
+		if board == nil && moves == nil {
+			break
+		}
+	}
+}
+
+func (game *instance) hasSetOverThirty() bool {
+	overThirtyPoints := false
+	for _, set := range game.board {
+		if set.Size() >= 30 {
+			overThirtyPoints = true
+		}
+	}
+	return overThirtyPoints
+}
+
+func (game *instance) hasSetWithJoker() bool {
+	for _, set := range game.board {
+		if set.NumberOfJokers() > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *instance) Start() {
 	for !g.IsGameOver() {
 		g.NextTurn()
+		if !g.IsValidBoard() {
+			fmt.Println("board has invalid sets")
+			g.restoreGameState()
+		} else if !g.firstMeldComplete {
+			if g.hasSetWithJoker() {
+				fmt.Println("initial meld cannot contain joker")
+				g.restoreGameState()
+			} else if !g.hasSetOverThirty() {
+				fmt.Println("initial meld must sum > 30")
+				g.restoreGameState()
+			} else {
+				g.firstMeldComplete = true
+			}
+		}
+		g.Clear()
+		g.players[g.currentPlayer].Clear()
 	}
 	g.PrintScores()
 }

@@ -56,20 +56,7 @@ func (p *player) printRack() {
 	fmt.Printf("=== Rack ===\n%s=== Rack ===\n", rack.String())
 }
 
-func restoreGameState(player Player, game Game) {
-	for {
-		moves, board := player.Undo(), game.Undo()
-		if moves == nil || board == nil {
-			break
-		}
-	}
-}
-
 func (player *player) StartTurn(game Game) {
-	defer func() {
-		game.Clear()
-		player.Clear()
-	}()
 	successfulMeld := uint16(0)
 	for {
 		game.PrintBoard()
@@ -78,10 +65,7 @@ func (player *player) StartTurn(game Game) {
 		command, err := Reader.ReadString('\n')
 		command = strings.TrimSpace(command)
 		if err != nil || command == "done" {
-			if !game.IsValidBoard() {
-				fmt.Println(InvalidBoard)
-				restoreGameState(player, game)
-			} else if successfulMeld == 0 {
+			if successfulMeld == 0 {
 				player.DealPiece(game.TakePiece())
 			}
 			break
