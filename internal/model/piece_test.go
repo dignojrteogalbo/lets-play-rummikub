@@ -139,6 +139,12 @@ func TestIsSamePiece(t *testing.T) {
 	})
 }
 
+func TestPieceString(t *testing.T) {
+	invalidPiece := &piece{value: Value(14), color: Color(9)}
+	result := invalidPiece.String()
+	assert.Equal(t, result, "invalid piece")
+}
+
 func TestValue(t *testing.T) {
 	t.Run("ShouldReturnZeroOnInvalidPiece", func(t *testing.T) {
 		piece := &piece{value: 16, color: 5}

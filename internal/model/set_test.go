@@ -26,6 +26,13 @@ func createGroupTiles(t *testing.T, length uint, value Value) []Piece {
 	return tiles
 }
 
+func TestLen(t *testing.T) {
+	nilSet := (*set)(nil)
+	assert.Zero(t, nilSet.Len())
+	notEmpty := &set{tiles: createRunTiles(t, 1, 9, ColorBlue)}
+	assert.Equal(t, notEmpty.Len(), 9)
+}
+
 func TestString(t *testing.T) {
 	test := &set{tiles: createRunTiles(t, 1, 13, ColorBlack)}
 	test.tiles = append(test.tiles, NewPiece(ValueJoker, ColorBlack))
@@ -50,6 +57,11 @@ func TestIsValidSet(t *testing.T) {
 		run := &set{tiles: createRunTiles(t, 3, 9, ColorGreen)}
 		result := run.IsValidSet()
 		assert.True(t, result)
+	})
+	t.Run("ShouldReturnFalseWithMultipleJokers", func(t *testing.T) {
+		notValid := &set{tiles: []Piece{NewPiece(ValueJoker, ColorBlack), NewPiece(ValueJoker, ColorBlack), NewPiece(Value(1), ColorGreen)}}
+		result := notValid.IsValidSet()
+		assert.False(t, result)
 	})
 	t.Run("ShouldReturnFalseOnNil", func(t *testing.T) {
 		result := (*set)(nil).IsValidSet()
@@ -92,14 +104,24 @@ func TestIsGroup(t *testing.T) {
 
 func TestIsRun(t *testing.T) {
 	t.Run("ShouldReturnTrueOnRun", func(t *testing.T) {
-		run := &set{tiles: createRunTiles(t, 4, 6, ColorRed)}
+		run := &set{tiles: createRunTiles(t, 4, 9, ColorRed)}
 		result := isRun(run)
 		assert.True(t, result)
 	})
 	t.Run("ShouldReturnTrueOnRunWithJoker", func(t *testing.T) {
-		run := &set{tiles: []Piece{NewPiece(Value(4), ColorRed), NewPiece(Value(5), ColorRed), NewPiece(Value(6), ColorRed)}}
+		run := &set{tiles: []Piece{NewPiece(Value(4), ColorRed), NewPiece(ValueJoker, ColorRed), NewPiece(Value(6), ColorRed)}}
 		result := isRun(run)
 		assert.True(t, result)
+	})
+	t.Run("ShouldReturnTrueOnRunStartingWithJoker", func(t *testing.T) {
+		run := &set{tiles: []Piece{NewPiece(ValueJoker, ColorBlack), NewPiece(Value(4), ColorRed), NewPiece(Value(5), ColorRed)}}
+		result := isRun(run)
+		assert.True(t, result)
+	})
+	t.Run("ShouldReturnFalseOnRunWithBadJoker", func(t *testing.T) {
+		run := &set{tiles: []Piece{NewPiece(Value(4), ColorRed), NewPiece(ValueJoker, ColorRed), NewPiece(Value(5), ColorRed)}}
+		result := isRun(run)
+		assert.False(t, result)
 	})
 	t.Run("ShouldReturnFalseOnTooFewPieces", func(t *testing.T) {
 		run := &set{tiles: []Piece{NewPiece(Value(6), ColorBlack), NewPiece(Value(7), ColorBlack)}}

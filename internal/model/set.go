@@ -85,17 +85,19 @@ func isRun(s *set) bool {
 	if len(s.tiles) < 3 {
 		return false
 	}
-	startPiece := s.tiles[0]
-	var previous, current Piece
-	for _, piece := range s.tiles {
-		previous, current = current, piece
-		if current.IsJoker() || previous == nil || previous.IsJoker() {
+	expectedColor, startingValue := Color(0), Value(0)
+	for index, piece := range s.tiles {
+		if piece.IsJoker() {
 			continue
 		}
-		if !startPiece.IsSameColor(piece) {
+		if expectedColor == Color(0) {
+			expectedColor = piece.Color()
+		} else if piece.Color() != expectedColor {
 			return false
 		}
-		if previous.Value()+1 != current.Value() {
+		if startingValue == Value(0) {
+			startingValue = piece.Value() - Value(index)
+		} else if piece.Value() != startingValue+Value(index) {
 			return false
 		}
 	}
@@ -105,6 +107,15 @@ func isRun(s *set) bool {
 func (s *set) IsValidSet() bool {
 	if s == nil || len(s.tiles) < 3 || len(s.tiles) > 13 {
 		return false
+	}
+	numberOfJokers := 0
+	for _, piece := range s.tiles {
+		if piece.IsJoker() {
+			numberOfJokers = numberOfJokers + 1
+		}
+		if numberOfJokers > 1 {
+			return false
+		}
 	}
 	return isGroup(s) || isRun(s)
 }

@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"lets-play-rummikub/internal/history"
 	"strconv"
 	"strings"
 )
@@ -12,15 +13,35 @@ type (
 		DealPiece(Piece)
 		StartTurn(game Game)
 		Score() uint16
+		history.Cloneable
+		history.History
 	}
 
 	player struct {
 		rack []Piece
+		history.History
 	}
 )
 
+func (p *player) Clone() history.Cloneable {
+	rack := make([]Piece, len(p.rack))
+	copy(rack, p.rack)
+	return &player{rack: rack}
+}
+
+func (p *player) Restore(newPlayer history.Cloneable) {
+	player, ok := newPlayer.(*player)
+	if !ok {
+		return
+	}
+	p.rack = player.rack
+}
+
 func NewPlayer() Player {
-	return &player{rack: make([]Piece, 0)}
+	instance := new(player)
+	instance.rack = make([]Piece, 0)
+	instance.History = history.NewHistory(instance)
+	return instance
 }
 
 func (p *player) DealPiece(piece Piece) {
@@ -35,23 +56,35 @@ func (p *player) printRack() {
 	fmt.Printf("=== Rack ===\n%s=== Rack ===\n", rack.String())
 }
 
+func restoreGameState(player Player, game Game) {
+	for {
+		moves, board := player.Undo(), game.Undo()
+		if moves == nil || board == nil {
+			break
+		}
+	}
+}
+
 func (player *player) StartTurn(game Game) {
+	defer func() {
+		game.Clear()
+		player.Clear()
+	}()
 	successfulMeld := uint16(0)
 	for {
 		game.PrintBoard()
 		player.printRack()
-		fmt.Print("Enter a command (combine, insert, split, done): ")
+		fmt.Println("valid commands are: combine, split, insert, remove, undo, help, done")
 		command, err := Reader.ReadString('\n')
 		command = strings.TrimSpace(command)
 		if err != nil || command == "done" {
 			if !game.IsValidBoard() {
 				fmt.Println(InvalidBoard)
-			} else {
-				if successfulMeld == 0 {
-					player.DealPiece(game.TakePiece())
-				}
-				break
+				restoreGameState(player, game)
+			} else if successfulMeld == 0 {
+				player.DealPiece(game.TakePiece())
 			}
+			break
 		}
 		player.parseCommand(command, game, &successfulMeld)
 	}
@@ -77,7 +110,7 @@ func (player *player) removePiece(pieces ...Piece) {
 }
 
 func (p *player) promptForSet(game Game) (Set, error) {
-	fmt.Print("Select set to insert: ")
+	fmt.Print("select a set: ")
 	input, err := Reader.ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -99,7 +132,7 @@ func (player *player) insert(game Game) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print("Select a piece <r#|p#> : ")
+	fmt.Print("select a piece <r#|p#> : ")
 	input, err := Reader.ReadString('\n')
 	if err != nil {
 		return err
@@ -109,7 +142,7 @@ func (player *player) insert(game Game) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Select index [0, %d] : ", set.Len())
+	fmt.Printf("select index [0, %d] : ", set.Len())
 	input, err = Reader.ReadString('\n')
 	if err != nil {
 		return err
@@ -131,7 +164,7 @@ func (player *player) insert(game Game) error {
 func (player *player) combine(game Game) error {
 	pieces := make([]Piece, 0)
 	for {
-		fmt.Print("Select a piece <r#|p#|done> : ")
+		fmt.Print("select a piece <r#|p#|done> : ")
 		input, err := Reader.ReadString('\n')
 		if err != nil {
 			return err
@@ -159,7 +192,7 @@ func (player *player) remove(game Game) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Select index [0, %d] : ", set.Len())
+	fmt.Printf("select index [0, %d] : ", set.Len())
 	input, err := Reader.ReadString('\n')
 	if err != nil {
 		return err
@@ -190,7 +223,7 @@ func (player *player) split(game Game) error {
 	if set.Len() < 2 {
 		return errors.New(CannotSplit)
 	}
-	fmt.Printf("Select index [1, %d] : ", set.Len())
+	fmt.Printf("select index [1, %d] : ", set.Len())
 	input, err := Reader.ReadString('\n')
 	if err != nil {
 		return err
@@ -210,30 +243,49 @@ func (player *player) split(game Game) error {
 }
 
 func (player *player) parseCommand(input string, game Game, successfulMeld *uint16) {
+	gameBeforeCommand := game.Clone()
+	playerBeforeCommand := player.Clone()
 	switch input {
 	case "done":
 	case "combine":
 		if err := player.combine(game); err != nil {
 			fmt.Println(err)
-		} else if game.IsValidBoard() {
+			return
+		}
+		game.Append(gameBeforeCommand)
+		player.Append(playerBeforeCommand)
+		if game.IsValidBoard() {
 			*successfulMeld++
 		}
 	case "split":
 		if err := player.split(game); err != nil {
 			fmt.Println(err)
+			return
 		}
+		game.Append(gameBeforeCommand)
+		player.Append(playerBeforeCommand)
 	case "insert":
 		if err := player.insert(game); err != nil {
 			fmt.Println(err)
-		} else if game.IsValidBoard() {
+			return
+		}
+		game.Append(gameBeforeCommand)
+		player.Append(playerBeforeCommand)
+		if game.IsValidBoard() {
 			*successfulMeld++
 		}
 	case "remove":
 		if err := player.remove(game); err != nil {
 			fmt.Println(err)
+			return
 		}
+		game.Append(gameBeforeCommand)
+		player.Append(playerBeforeCommand)
+	case "undo":
+		game.Undo()
+		player.Undo()
 	case "help":
-		fmt.Println("valid commands are: combine, split, insert, remove, help, done")
+		fmt.Println("valid commands are: combine, split, insert, remove, undo, help, done")
 	default:
 		fmt.Println("invalid command")
 	}

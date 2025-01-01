@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"lets-play-rummikub/internal/history"
 	"math/rand"
 	"os"
 	"time"
@@ -28,9 +29,9 @@ type (
 		Piece(index int) Piece
 		AddLoosePiece(piece Piece)
 		RemovePieces(piece ...Piece)
-		SetBoard(game Game)
 		IsValidBoard() bool
-		CloneBoard() Game
+		history.History
+		history.Cloneable
 	}
 
 	instance struct {
@@ -39,6 +40,7 @@ type (
 		loose         []Piece
 		players       []Player
 		currentPlayer int
+		history.History
 	}
 )
 
@@ -73,10 +75,11 @@ func NewGame(totalPlayers uint) Game {
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
 	instance.currentPlayer = -1
+	instance.History = history.NewHistory(instance)
 	return instance
 }
 
-func (game *instance) CloneBoard() Game {
+func (game *instance) Clone() history.Cloneable {
 	newGame := new(instance)
 	board := make([]Set, len(game.board))
 	for i := range game.board {
@@ -89,7 +92,7 @@ func (game *instance) CloneBoard() Game {
 	return newGame
 }
 
-func (game *instance) SetBoard(newGame Game) {
+func (game *instance) Restore(newGame history.Cloneable) {
 	setInstance, ok := newGame.(*instance)
 	if !ok || setInstance == nil {
 		return
