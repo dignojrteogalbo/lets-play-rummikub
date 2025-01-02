@@ -90,10 +90,10 @@ func (p *player) printRack() {
 
 func (player *player) StartTurn(game Game) {
 	successfulMeld := uint16(0)
+	game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
 	for {
 		game.PrintBoard()
 		player.printRack()
-		game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
 		command := <-player.messages
 		command = strings.TrimSpace(command)
 		if command == "done" {
