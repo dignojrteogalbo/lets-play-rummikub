@@ -1,5 +1,5 @@
 package event
 
 type Listener interface {
-	Notify()
+	Notify(messages ...string)
 }

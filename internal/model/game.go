@@ -34,7 +34,7 @@ type (
 		Player(index int) Player
 		TotalPlayers() int
 		MarshalJSON() ([]byte, error)
-		Notify()
+		Notify(message ...string)
 		history.History
 		history.Cloneable
 	}
@@ -51,9 +51,9 @@ type (
 	}
 )
 
-func (g *instance) Notify() {
+func (g *instance) Notify(messages ...string) {
 	if g.Listener != nil {
-		g.Listener.Notify()
+		g.Listener.Notify(messages...)
 	}
 }
 
@@ -86,7 +86,9 @@ func (g *instance) createTiles() {
 func (g *instance) createPlayers(totalPlayers int) {
 	g.players = make([]Player, 0, totalPlayers)
 	for i := 0; i < int(totalPlayers); i++ {
-		g.players = append(g.players, NewPlayer())
+		player := NewPlayer()
+		player.SetName(fmt.Sprintf("Player %d", i+1))
+		g.players = append(g.players, player)
 	}
 }
 
@@ -262,7 +264,7 @@ func (g *instance) AddSet(set Set) {
 	g.board = append(g.board, set)
 }
 
-func (game *instance) restoreGameState(listener event.Listener) {
+func (game *instance) restoreGameState() {
 	currentPlayer := game.players[game.currentPlayer]
 	for {
 		moves, board := currentPlayer.Undo(), game.Undo()
@@ -299,14 +301,14 @@ func (g *instance) Start(listener event.Listener) {
 		g.NextTurn()
 		if !g.IsValidBoard() {
 			fmt.Println("board has invalid sets")
-			g.restoreGameState(listener)
+			g.restoreGameState()
 		} else if !g.firstMeldComplete {
 			if g.hasSetWithJoker() {
 				fmt.Println("initial meld cannot contain joker")
-				g.restoreGameState(listener)
+				g.restoreGameState()
 			} else if !g.hasSetOverThirty() {
 				fmt.Println("initial meld must sum > 30")
-				g.restoreGameState(listener)
+				g.restoreGameState()
 			} else {
 				g.firstMeldComplete = true
 			}

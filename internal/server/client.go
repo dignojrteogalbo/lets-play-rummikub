@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -49,13 +50,20 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		player := c.server.clients[c]
+		if strings.HasPrefix(string(message), "/name ") {
+			player.SetName(string(message[6:]))
+			c.send <- []byte(fmt.Sprintf("your name has been set to: %s", player.Name()))
+			continue
+		}
+		chatMessage := fmt.Sprintf("%s: %s", player.Name(), message)
 		if !c.server.gameStarted {
-			c.server.receive <- message
+			c.server.receive <- []byte(chatMessage)
 		} else if currentPlayer := c.server.gameInstance.CurrentPlayer(); currentPlayer == c.server.clients[c] {
 			c.send <- message
 			currentPlayer.Message(string(message))
 		} else {
-			c.server.receive <- message
+			c.server.receive <- []byte(chatMessage)
 		}
 	}
 }

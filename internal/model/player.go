@@ -16,12 +16,15 @@ type (
 		Score() uint16
 		Message(message string)
 		MarshalJSON() ([]byte, error)
+		Name() string
+		SetName(string)
 		history.Cloneable
 		history.History
 	}
 
 	player struct {
-		rack []Piece
+		name string
+		rack     []Piece
 		messages chan string
 		history.History
 	}
@@ -62,6 +65,17 @@ func NewPlayer() Player {
 	return instance
 }
 
+func (p *player) Name() string {
+	if len(p.name) == 0 {
+		return "Player"
+	}
+	return p.name
+}
+
+func (p *player) SetName(name string) {
+	p.name = name
+}
+
 func (p *player) DealPiece(piece Piece) {
 	if piece == nil {
 		return
@@ -79,10 +93,8 @@ func (player *player) StartTurn(game Game) {
 	for {
 		game.PrintBoard()
 		player.printRack()
-		game.Notify()
-		fmt.Println("valid commands are: combine, split, insert, remove, undo, help, done")
-		// command, err := reader.ReadString('\n')
-		command := <- player.messages
+		game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
+		command := <-player.messages
 		command = strings.TrimSpace(command)
 		if command == "done" {
 			if successfulMeld == 0 {
@@ -114,11 +126,8 @@ func (player *player) removePiece(pieces ...Piece) {
 }
 
 func (p *player) promptForSet(game Game) (Set, error) {
-	fmt.Print("select a set: ")
-	input, err := Reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
+	game.Notify("select a set: ")
+	input := <-p.messages
 	input = strings.TrimSpace(input)
 	setIndex, err := parseInt(input)
 	if err != nil {
@@ -136,18 +145,15 @@ func (player *player) insert(game Game) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print("select a piece <r#|p#> : ")
-	input := <- player.messages
+	game.Notify("select a piece <r#|p#> : ")
+	input := <-player.messages
 	input = strings.TrimSpace(input)
 	piece, err := player.selectPiece(input, game)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("select index [0, %d] : ", set.Len())
-	input, err = Reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
+	game.Notify(fmt.Sprintf("select index [0, %d] : ", set.Len()))
+	input = <-player.messages
 	input = strings.TrimSpace(input)
 	index, err := parseInt(input)
 	if err != nil {
@@ -165,12 +171,8 @@ func (player *player) insert(game Game) error {
 func (player *player) combine(game Game) error {
 	pieces := make([]Piece, 0)
 	for {
-		fmt.Print("select a piece <r#|p#|done> : ")
+		game.Notify("select a piece <r#|p#|done> : ")
 		input := <-player.messages
-		// input, err := Reader.ReadString('\n')
-		// if err != nil {
-		// 	return err
-		// }
 		input = strings.TrimSpace(input)
 		if input == "done" {
 			break
@@ -180,7 +182,7 @@ func (player *player) combine(game Game) error {
 			return err
 		}
 		pieces = append(pieces, piece)
-		fmt.Printf("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
+		game.Notify("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
 	}
 	set := Combine(pieces...)
 	player.removePiece(pieces...)
@@ -194,8 +196,8 @@ func (player *player) remove(game Game) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("select index [0, %d] : ", set.Len())
-	input := <- player.messages
+	game.Notify(fmt.Sprintf("select index [0, %d] : ", set.Len()))
+	input := <-player.messages
 	input = strings.TrimSpace(input)
 	index, err := parseInt(input)
 	if err != nil {
@@ -222,8 +224,8 @@ func (player *player) split(game Game) error {
 	if set.Len() < 2 {
 		return errors.New(CannotSplit)
 	}
-	fmt.Printf("select index [1, %d] : ", set.Len())
-	input := <- player.messages
+	game.Notify(fmt.Sprintf("select index [1, %d] : ", set.Len()))
+	input := <-player.messages
 	input = strings.TrimSpace(input)
 	index, err := parseInt(input)
 	if err != nil {
@@ -245,7 +247,7 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 	case "done":
 	case "combine":
 		if err := player.combine(game); err != nil {
-			fmt.Println(err)
+			game.Notify(err.Error())
 			return
 		}
 		game.Append(gameBeforeCommand)
@@ -255,14 +257,14 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 		}
 	case "split":
 		if err := player.split(game); err != nil {
-			fmt.Println(err)
+			game.Notify(err.Error())
 			return
 		}
 		game.Append(gameBeforeCommand)
 		player.Append(playerBeforeCommand)
 	case "insert":
 		if err := player.insert(game); err != nil {
-			fmt.Println(err)
+			game.Notify(err.Error())
 			return
 		}
 		game.Append(gameBeforeCommand)
@@ -272,7 +274,7 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 		}
 	case "remove":
 		if err := player.remove(game); err != nil {
-			fmt.Println(err)
+			game.Notify(err.Error())
 			return
 		}
 		game.Append(gameBeforeCommand)
@@ -281,9 +283,9 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 		game.Undo()
 		player.Undo()
 	case "help":
-		fmt.Println("valid commands are: combine, split, insert, remove, undo, help, done")
+		game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
 	default:
-		fmt.Println("invalid command")
+		game.Notify("invalid command")
 	}
 }
 

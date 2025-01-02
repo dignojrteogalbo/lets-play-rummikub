@@ -85,6 +85,11 @@ func TestIsGroup(t *testing.T) {
 		result := isGroup(group)
 		assert.True(t, result)
 	})
+	t.Run("ShouldReturnTrueOnGroupStartingWithJoker", func(t *testing.T) {
+		group := &set{tiles: []Piece{NewPiece(ValueJoker, ColorBlack), NewPiece(1, ColorBlack), NewPiece(1, ColorGreen)}}
+		result := isGroup(group)
+		assert.True(t, result)
+	})
 	t.Run("ShouldReturnTrueOnGroupWithJoker", func(t *testing.T) {
 		group := &set{tiles: []Piece{NewPiece(1, ColorBlack), NewPiece(ValueJoker, ColorBlack), NewPiece(1, ColorGreen)}}
 		result := isGroup(group)

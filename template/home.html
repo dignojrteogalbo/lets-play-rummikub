@@ -2,11 +2,25 @@
 <html lang="en">
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Let's Play Rummikub</title>
     <script type="text/javascript">
         window.onload = function () {
             var conn;
             var game = document.getElementById("game");
+            var ctx = game.getContext("2d");
+            const { width, height } = game;
+            const pieceWidth = 40;
+            const pieceHeight = 50;
+            const piecePadding = 5;
+            const pieceBorderWidth = 2;
+            const tileWidth = pieceWidth + (2 * pieceBorderWidth)
+            const tileHeight = pieceHeight + (2 * pieceBorderWidth)
+            const setPadding = 9;
+            const textHeight = 18;
+            var board = [];
+            var loose = [];
+            var rack = [];
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
 
@@ -18,12 +32,94 @@
                 }
             }
 
-            function updateBoard(board) {
+            function updateBoard(newBoard, newPieces) {
                 console.log(board);
+                board = newBoard ?? [];
+                loose = newPieces ?? [];
+                drawGame();
             }
 
-            function updateRack(rack) {
-                console.log(rack);
+            function updateRack(newRack) {
+                rack = newRack;
+                drawGame();
+            }
+
+            function drawTile(x, y, piece) {
+                ctx.fillStyle = "black";
+                ctx.fillRect(x, y, pieceWidth + (2 * pieceBorderWidth), pieceHeight + (2 * pieceBorderWidth));
+                ctx.fillStyle = "white";
+                ctx.fillRect(x + pieceBorderWidth, y + pieceBorderWidth, pieceWidth, pieceHeight);
+                ctx.fillStyle = piece["color"] ?? "black";
+                ctx.font = "18px Arial";
+                var value = piece["joker"] ? "☺" : piece["value"];
+                var xOffsetText = x + pieceBorderWidth + (pieceWidth / 2) - piecePadding;
+                if (isNaN(+value) || +value >= 10) {
+                    xOffsetText -= piecePadding;
+                }
+                ctx.fillText(value, xOffsetText, y + pieceBorderWidth + (pieceHeight / 2) + piecePadding);
+            }
+
+            function writeText(x, y, text) {
+                ctx.fillStyle = "black";
+                ctx.font = "18px Arial";
+                ctx.fillText(text, x, y);
+            }
+
+            function drawBackground() {
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            function drawRack() {
+                var xOffset = piecePadding;
+                var numberOfRackRows = Math.ceil((rack.length * (tileWidth + piecePadding)) / width);
+                var rackOffset = height - (numberOfRackRows * (tileHeight + piecePadding));
+                writeText(xOffset + piecePadding, rackOffset - piecePadding, "Rack");
+                for (var i = 0; i < rack.length; i++) {
+                    if (xOffset + tileWidth > width) {
+                        xOffset = piecePadding;
+                        rackOffset += tileHeight + piecePadding;
+                    }
+                    const piece = rack[i];
+                    drawTile(xOffset, rackOffset, piece);
+                    xOffset += tileWidth + piecePadding;
+                }
+            }
+
+            function drawBoard() {
+                var xOffset = piecePadding;
+                var yOffset = piecePadding
+                writeText(xOffset + piecePadding, yOffset + textHeight, "Board");
+                yOffset += textHeight + piecePadding;
+                for (var i = 0; i < board.length; i++) {
+                    var set = JSON.parse(board[i]);
+                    set = set["pieces"];
+                    if (xOffset + (set.length * tileWidth) > width) {
+                        xOffset = piecePadding;
+                        yOffset += tileHeight + piecePadding
+                    }
+                    for (var j = 0; j < set.length; j++) {
+                        const piece = set[j];
+                        drawTile(xOffset, yOffset, piece);
+                        xOffset += tileWidth - pieceBorderWidth;
+                    }
+                    xOffset += setPadding;
+                }
+                for (var x = 0; x < loose.length; x++) {
+                    if (xOffset + tileWidth + piecePadding > width) {
+                        xOffset = piecePadding;
+                        yOffset += tileHeight + piecePadding;
+                    }
+                    const piece = loose[x];
+                    drawTile(xOffset, yOffset, piece);
+                    xOffset += tileWidth + piecePadding
+                }
+            }
+
+            function drawGame() {
+                drawBackground();
+                drawRack();
+                drawBoard();
             }
 
             document.getElementById("form").onsubmit = function () {
@@ -47,16 +143,17 @@
                 };
                 conn.onmessage = function (evt) {
                     console.log("event.data", evt.data);
-                    try {
-                        var gameData = JSON.parse(evt.data);
-                        if (Object.hasOwn(gameData, "board")) {
-                            updateBoard(gameData)
-                        } else if (Object.hasOwn(gameData, "rack")) {
-                            updateRack(gameData);
-                        }
-                    } catch {
-                        var messages = evt.data.split('\n');
-                        for (var i = 0; i < messages.length; i++) {
+                    var messages = evt.data.split('\n');
+                    for (var i = 0; i < messages.length; i++) {
+                        try {
+                            var gameData = JSON.parse(messages[i]);
+                            if (Object.hasOwn(gameData, "board")) {
+                                updateBoard(gameData["board"], gameData["piece"]);
+                            } else if (Object.hasOwn(gameData, "rack")) {
+                                updateRack(gameData["rack"]);
+                            }
+                        } catch (err) {
+                            console.log(err);
                             var item = document.createElement("div");
                             item.innerText = messages[i];
                             appendLog(item);
@@ -71,59 +168,64 @@
         };
     </script>
     <style type="text/css">
-        html {
+        html,
+        body {
+            margin: 0;
             height: 100%;
-            padding-bottom: 5em;
-            overflow: hidden;
         }
 
         body {
+            max-height: -webkit-fill-available;
+            display: flex;
+            flex-direction: row;
+            padding: 0.5em;
+            background: gray;
+        }
+
+        #chat {
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            padding: 0;
-            margin: 0;
-            width: 100%;
-            height: 100%;
-            background: gray;
+            width: 300px;
+            padding-left: 0.5em;
         }
 
         #log {
             flex: 1;
+            width: 100%;
             background: white;
-            margin: 0.5em;
-            margin-bottom: 3em;
-            padding: 0.5em 0.5em 0.5em 0.5em;
+            margin: 0;
+            margin-bottom: 0.5em;
             overflow: auto;
         }
 
         #form {
-            padding: 0 0.5em 0 0.5em;
+            display: flex;
+            flex-direction: row;
+            padding: 0;
             margin: 0;
-            position: absolute;
-            bottom: 1em;
-            left: 0px;
             width: 100%;
-            overflow: hidden;
         }
 
         #game {
-            background: blue;
-            height: 500px;
+            background: gray;
+            height: 100%;
+            width: 100%;
             margin: 0;
-            padding: 0.5em 0.5em 0.5em 0.5em;
+            padding: 0;
             overflow: auto;
         }
     </style>
 </head>
 
 <body>
-    <canvas id="game"></canvas>
-    <div id="log"></div>
-    <form id="form">
-        <input type="submit" value="Send" />
-        <input type="text" id="msg" size="64" autofocus />
-    </form>
+    <canvas id="game" width="1080" height="720"></canvas>
+    <div id="chat">
+        <div id="log"></div>
+        <form id="form">
+            <input type="text" id="msg" size="36" autofocus />
+            <input type="submit" value="Send" />
+        </form>
+    </div>
 </body>
 
 </html>

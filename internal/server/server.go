@@ -30,7 +30,7 @@ func NewServer(totalPlayers uint) *Server {
 	}
 }
 
-func (s *Server) Notify() {
+func (s *Server) Notify(message ...string) {
 	for client, player := range s.clients {
 		gameState, err := s.gameInstance.MarshalJSON()
 		if err == nil {
@@ -39,6 +39,11 @@ func (s *Server) Notify() {
 		playerState, err := player.MarshalJSON()
 		if err == nil {
 			client.send <- playerState
+		}
+		if s.gameInstance.CurrentPlayer() == player {
+			for _, m := range message {
+				client.send <- []byte(m)
+			}
 		}
 	}
 }

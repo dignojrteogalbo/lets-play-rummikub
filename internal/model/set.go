@@ -87,7 +87,7 @@ func isGroup(s *set) bool {
 	if len(s.tiles) < 3 || len(s.tiles) > 4 {
 		return false
 	}
-	startPiece := s.tiles[0]
+	var startPiece Piece
 	colors := map[Color]bool{
 		ColorBlack: false,
 		ColorBlue:  false,
@@ -99,6 +99,8 @@ func isGroup(s *set) bool {
 		if piece.IsJoker() {
 			totalColors++
 			continue
+		} else if startPiece == nil {
+			startPiece = piece
 		}
 		if !startPiece.IsSameValue(piece) {
 			return false
