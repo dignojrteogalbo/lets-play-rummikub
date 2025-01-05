@@ -99,6 +99,7 @@ func NewGame(totalPlayers uint) Game {
 	instance := new(instance)
 	instance.firstMeldComplete = false
 	instance.board = make([]Set, 0)
+	instance.loose = make([]Piece, 0)
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
 	instance.currentPlayer = 0
@@ -219,7 +220,28 @@ func (g *instance) TotalPlayers() int {
 
 func (g *instance) NextTurn() {
 	fmt.Printf("Player #%d's turn\n", g.currentPlayer+1)
-	g.players[g.currentPlayer].StartTurn(g)
+	currentPlayer := g.CurrentPlayer()
+	playerScore := currentPlayer.Score()
+	g.CurrentPlayer().StartTurn(g)
+	if !g.IsValidBoard() {
+		fmt.Println("board has invalid sets")
+		g.restoreGameState()
+	} else if !g.firstMeldComplete {
+		if g.hasSetWithJoker() {
+			fmt.Println("initial meld cannot contain joker")
+			g.restoreGameState()
+		} else if !g.hasSetOverThirty() {
+			fmt.Println("initial meld must sum > 30")
+			g.restoreGameState()
+		} else {
+			g.firstMeldComplete = true
+		}
+	}
+	if playerScore >= currentPlayer.Score() {
+		currentPlayer.DealPiece(g.TakePiece())
+	}
+	g.Clear()
+	currentPlayer.Clear()
 	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
 }
 
@@ -268,7 +290,7 @@ func (game *instance) restoreGameState() {
 	currentPlayer := game.players[game.currentPlayer]
 	for {
 		moves, board := currentPlayer.Undo(), game.Undo()
-		if board == nil && moves == nil {
+		if game.IsValidBoard() || (board == nil && moves == nil) {
 			break
 		}
 	}
@@ -299,22 +321,6 @@ func (g *instance) Start(listener event.Listener) {
 	}
 	for !g.IsGameOver() {
 		g.NextTurn()
-		if !g.IsValidBoard() {
-			fmt.Println("board has invalid sets")
-			g.restoreGameState()
-		} else if !g.firstMeldComplete {
-			if g.hasSetWithJoker() {
-				fmt.Println("initial meld cannot contain joker")
-				g.restoreGameState()
-			} else if !g.hasSetOverThirty() {
-				fmt.Println("initial meld must sum > 30")
-				g.restoreGameState()
-			} else {
-				g.firstMeldComplete = true
-			}
-		}
-		g.Clear()
-		g.players[g.currentPlayer].Clear()
 	}
 	g.PrintScores()
 }

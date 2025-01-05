@@ -15,6 +15,7 @@ type (
 		Remove(p Piece) (Set, error)
 		Split(index int) (Set, Set, error)
 		String() string
+		MarshalJSON() ([]byte, error)
 		Piece(index int) (Piece, error)
 		Clone() Set
 		IsValidSet() bool
@@ -25,7 +26,7 @@ type (
 	}
 )
 
-func (s *set) MarshalText() ([]byte, error) {
+func (s *set) MarshalJSON() ([]byte, error) {
 	output := struct {
 		Pieces []Piece `json:"pieces"`
 	}{

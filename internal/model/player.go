@@ -23,7 +23,7 @@ type (
 	}
 
 	player struct {
-		name string
+		name     string
 		rack     []Piece
 		messages chan string
 		history.History
@@ -89,20 +89,16 @@ func (p *player) printRack() {
 }
 
 func (player *player) StartTurn(game Game) {
-	successfulMeld := uint16(0)
-	game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
 	for {
 		game.PrintBoard()
 		player.printRack()
+		game.Notify()
 		command := <-player.messages
 		command = strings.TrimSpace(command)
 		if command == "done" {
-			if successfulMeld == 0 {
-				player.DealPiece(game.TakePiece())
-			}
 			break
 		}
-		player.parseCommand(command, game, &successfulMeld)
+		player.parseCommand(command, game)
 	}
 }
 
@@ -164,6 +160,7 @@ func (player *player) insert(game Game) error {
 		return err
 	}
 	player.removePiece(piece)
+	game.RemovePieces(piece)
 	game.ReplaceSet(set, insert)
 	return nil
 }
@@ -240,7 +237,7 @@ func (player *player) split(game Game) error {
 	return nil
 }
 
-func (player *player) parseCommand(input string, game Game, successfulMeld *uint16) {
+func (player *player) parseCommand(input string, game Game) {
 	gameBeforeCommand := game.Clone()
 	playerBeforeCommand := player.Clone()
 	switch input {
@@ -252,9 +249,6 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 		}
 		game.Append(gameBeforeCommand)
 		player.Append(playerBeforeCommand)
-		if game.IsValidBoard() {
-			*successfulMeld++
-		}
 	case "split":
 		if err := player.split(game); err != nil {
 			game.Notify(err.Error())
@@ -269,9 +263,6 @@ func (player *player) parseCommand(input string, game Game, successfulMeld *uint
 		}
 		game.Append(gameBeforeCommand)
 		player.Append(playerBeforeCommand)
-		if game.IsValidBoard() {
-			*successfulMeld++
-		}
 	case "remove":
 		if err := player.remove(game); err != nil {
 			game.Notify(err.Error())
