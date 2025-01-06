@@ -25,7 +25,7 @@
                     this.height = height;
                 }
                 isInBounds(x, y) {
-                    return x >= this.x && x <= this.x + this.width && y >= this.y && y <= this.y + height
+                    return x >= this.x && x <= this.x + this.width && y >= this.y && y <= this.y + this.height
                 }
                 setOrigin(x, y) {
                     this.x = x;
@@ -41,11 +41,20 @@
                     super(x, y, tileWidth, tileHeight);
                     this.value = value ?? "☺";
                     this.color = color ?? "black";
+                    this.background = "white";
+                }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        mouse.click(this);
+                    }
+                }
+                setBackground(color) {
+                    this.background = color;
                 }
                 draw() {
                     ctx.fillStyle = "black";
                     ctx.fillRect(this.x, this.y, pieceWidth + (2 * pieceBorderWidth), pieceHeight + (2 * pieceBorderWidth));
-                    ctx.fillStyle = "white";
+                    ctx.fillStyle = this.background;
                     ctx.fillRect(this.x + pieceBorderWidth, this.y + pieceBorderWidth, pieceWidth, pieceHeight);
                     ctx.fillStyle = this.color;
                     ctx.font = "18px Arial";
@@ -84,18 +93,16 @@
                     }
                 }
                 click(x, y) {
-                    if (!this.isInBounds(x, y) || this.children.length == 0) {
-                        return
-                    }
-                    for (var i = 0; i < this.children.length; i++) {
-                        if (this.children[i].isInBounds(x, y)) {
-                            return this.children[i].click();
+                    if (this.isInBounds(x, y)) {
+                        for (const child of this.children) {
+                            child.click(x, y);
                         }
+                        mouse.click(this);
                     }
                 }
                 draw() {
-                    for (var i = 0; i < this.children.length; i++) {
-                        this.children[i].draw();
+                    for (const child of this.children) {
+                        child.draw();
                     }
                 }
             }
@@ -122,10 +129,17 @@
                         xOffset += child.width + piecePadding;
                     }
                 }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        for (const child of this.children) {
+                            child.click(x, y);
+                        }
+                    }
+                }
                 draw() {
                     writeText(this.x + piecePadding, this.y + piecePadding + fullTextHeight, "Board");
-                    for (var i = 0; i < this.children.length; i++) {
-                        this.children[i].draw();
+                    for (const child of this.children) {
+                        child.draw();
                     }
                 }
             }
@@ -152,16 +166,49 @@
                         }
                     }
                 }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        for (const child of this.children) {
+                            child.click(x, y);
+                        }
+                    }
+                }
                 draw() {
                     writeText(this.x + piecePadding, this.y + piecePadding, "Rack");
-                    for (var i = 0; i < this.children.length; i++) {
-                        this.children[i].draw();
+                    for (const child of this.children) {
+                        child.draw();
+                    }
+                }
+            }
+            class Mouse {
+                constructor() {
+                    this.current = { x: 0, y: 0 };
+                    this.mouseDown = { x: 0, y: 0 };
+                    this.mouseUp = { x: 0, y: 0 };
+                    this.selected = [];
+                    this.clicked = null;
+                    this.set = null;
+                }
+
+                click(element) {
+                    if (element === null) {
+                        this.clicked = null;
+                        this.set = null;
+                    }
+                    if (element instanceof Tile) {
+                        this.clicked = element;
+                        return;
+                    }
+                    if (element instanceof Set) {
+                        this.set = element;
+                        return;
                     }
                 }
             }
             var conn;
             const rack = new Rack(0, height - piecePadding - halfTextHeight, width, piecePadding + halfTextHeight);
             const board = new Board(0, 0, width, height - rack.height);
+            const mouse = new Mouse();
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
 
@@ -182,6 +229,12 @@
             function drawBackground(x, y, width, height) {
                 ctx.fillStyle = "white";
                 ctx.fillRect(x, y, width, height);
+            }
+
+            function drawGame() {
+                drawBackground(0, 0, width, height);
+                rack.draw();
+                board.draw();
             }
 
             function updateRack(newRack) {
@@ -213,6 +266,53 @@
                 return false;
             };
 
+            function mouseCoordinates(event) {
+                const { clientX, clientY } = event;
+                const rect = game.getBoundingClientRect();
+                return { x: (clientX - rect.left) * width / game.clientWidth, y: (clientY - rect.top) * height / game.clientHeight }
+            }
+
+            game.onmousedown = function (event) {
+                mouse.mouseDown = mouseCoordinates(event);
+                for (const element of [board, rack]) {
+                    element.click(mouse.mouseDown.x, mouse.mouseDown.y);
+                }
+                if (mouse.clicked == null) {
+                    for (const tile of mouse.selected) {
+                        tile.setBackground("white");
+                        tile.draw();
+                    }
+                    mouse.selected = [];
+                } else {
+                    const removedClicked = mouse.selected.findIndex(value => (value === mouse.clicked));
+                    if (removedClicked > -1) {
+                        mouse.clicked.setBackground("white");
+                        mouse.selected.splice(removedClicked, 1);
+                    } else {
+                        mouse.clicked.setBackground("yellow");
+                        mouse.selected.push(mouse.clicked);
+                    }
+                    mouse.clicked.draw();
+                }
+            }
+
+            game.onmouseup = function (event) {
+                mouse.click(null);
+                drawGame();
+            }
+
+            game.onmousemove = function (event) {
+                mouse.current = mouseCoordinates(event);
+                drawGame();
+                if (mouse.clicked != null) {
+                    drawBackground(mouse.clicked.x, mouse.clicked.y, mouse.clicked.width, mouse.clicked.height);
+                    var xOffset = mouse.clicked.x - mouse.mouseDown.x;
+                    var yOffset = mouse.clicked.y - mouse.mouseDown.y;
+                    dragTile = new Tile(mouse.current.x + xOffset, mouse.current.y + yOffset, mouse.clicked.value, mouse.clicked.color);
+                    dragTile.draw();
+                }
+            }
+
             if (window["WebSocket"]) {
                 conn = new WebSocket("ws://" + document.location.host + "/ws");
                 conn.onclose = function (evt) {
@@ -231,9 +331,7 @@
                             } else if (Object.hasOwn(gameData, "board")) {
                                 updateBoard(gameData["board"], gameData["piece"])
                             }
-                            drawBackground(0, 0, width, height);
-                            rack.draw();
-                            board.draw();
+                            drawGame();
                         } catch (err) {
                             console.log(err);
                             var item = document.createElement("div");
