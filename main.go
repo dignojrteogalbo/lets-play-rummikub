@@ -21,7 +21,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	gameServer := server.NewServer(1)
+	gameServer := server.NewServer(2)
 	go gameServer.Run()
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

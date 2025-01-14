@@ -18,49 +18,62 @@ const (
 
 func (c *Client) handleCommand(event Event) {
 	server, player, game, moveHistory := c.server, c.server.clients[c], c.server.game, c.server.history
-	if server.gameStarted {
-		switch event.Command {
-		case "combine":
-			if playerCommand, err := command.Combine(player, game, event.Input); err == nil {
-				playerCommand.Invoke()
-				moveHistory.Push(playerCommand)
-			} else {
-				c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
-			}
-			return
-		case "insert":
-			if playerCommand, err := command.Insert(player, game, event.Input); err == nil {
-				playerCommand.Invoke()
-				moveHistory.Push(playerCommand)
-			} else {
-				c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
-			}
-			return
-		case "remove":
-			if playerCommand, err := command.Remove(game, event.Input); err == nil {
-				playerCommand.Invoke()
-				moveHistory.Push(playerCommand)
-			} else {
-				c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
-			}
-			return
-		case "split":
-			if playerCommand, err := command.Split(game, event.Input); err == nil {
-				playerCommand.Invoke()
-				moveHistory.Push(playerCommand)
-			} else {
-				c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
-			}
-			return
-		case "undo":
-			command := moveHistory.Pop()
-			if command != nil {
-				command.Undo()
-			}
+	switch event.Command {
+	case "combine":
+		if game.CurrentPlayer() != player {
 			return
 		}
-	}
-	switch event.Command {
+		if playerCommand, err := command.Combine(player, game, event.Input); err == nil {
+			playerCommand.Invoke()
+			moveHistory.Push(playerCommand)
+		} else {
+			c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
+		}
+	case "insert":
+		if game.CurrentPlayer() != player {
+			return
+		}
+		if playerCommand, err := command.Insert(player, game, event.Input); err == nil {
+			playerCommand.Invoke()
+			moveHistory.Push(playerCommand)
+		} else {
+			c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
+		}
+	case "remove":
+		if game.CurrentPlayer() != player {
+			return
+		}
+		if playerCommand, err := command.Remove(game, event.Input); err == nil {
+			playerCommand.Invoke()
+			moveHistory.Push(playerCommand)
+		} else {
+			c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
+		}
+	case "split":
+		if game.CurrentPlayer() != player {
+			return
+		}
+		if playerCommand, err := command.Split(game, event.Input); err == nil {
+			playerCommand.Invoke()
+			moveHistory.Push(playerCommand)
+		} else {
+			c.send <- []byte(fmt.Sprintf(commandError, event.Command, err.Error()))
+		}
+	case "undo":
+		if game.CurrentPlayer() != player {
+			return
+		}
+		command := moveHistory.Pop()
+		if command != nil {
+			command.Undo()
+		}
+	case "end":
+		if game.CurrentPlayer() != player {
+			return
+		}
+		if ok := game.NextTurn(); ok {
+			moveHistory.Clear()
+		}
 	case "start":
 		if !server.gameStarted && len(server.clients) == server.game.TotalPlayers() {
 			server.gameStarted = true
@@ -68,8 +81,6 @@ func (c *Client) handleCommand(event Event) {
 		} else {
 			c.send <- []byte("not enough players to start game")
 		}
-	case "end":
-		game.NextTurn()
 	case "shuffle":
 		if !server.tilesShuffled {
 			game.Shuffle()
@@ -79,8 +90,8 @@ func (c *Client) handleCommand(event Event) {
 	case "deal":
 		if !server.tilesDealt && len(server.clients) == server.game.TotalPlayers() {
 			game.DealPieces()
-			game.Notify()
 			server.tilesDealt = true
+			game.Notify()
 		} else {
 			c.send <- []byte("not enough players connected to deal pieces")
 		}

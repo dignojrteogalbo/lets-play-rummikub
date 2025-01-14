@@ -25,7 +25,7 @@ type (
 		IsValidBoard() bool
 		CurrentPlayer() Player
 		Player(index int) Player
-		NextTurn()
+		NextTurn() bool
 		TotalPlayers() int
 		MarshalJSON() ([]byte, error)
 		Notify(message ...string)
@@ -133,6 +133,10 @@ func (game *instance) IsValidBoard() bool {
 	return true
 }
 
+func (game *instance) hasLoosePieces() bool {
+	return len(game.loose) != 0
+}
+
 func (g *instance) Shuffle() {
 	for i := range g.tiles {
 		j := rand.Intn(i + 1)
@@ -214,29 +218,34 @@ func (g *instance) TotalPlayers() int {
 	return len(g.players)
 }
 
-func (g *instance) NextTurn() {
+func (g *instance) NextTurn() bool {
 	if !g.IsValidBoard() {
 		g.Notify("board has invalid sets")
-		return
+		return false
+	}
+	if g.hasLoosePieces() {
+		g.Notify("board has loose pieces")
+		return false
 	}
 	if !g.firstMeldComplete && len(g.board) > 0 {
 		if g.hasSetWithJoker() {
 			g.Notify("initial meld cannot contain joker")
-			return
+			return false
 		}
 		if !g.hasSetOverThirty() {
 			g.Notify("initial meld must sum > 30")
-			return
+			return false
 		}
 		g.firstMeldComplete = true
 	}
 	currentPlayer := g.CurrentPlayer()
-	if g.currentPlayerRackLen >= currentPlayer.RackLen() {
+	if currentPlayer.RackLen() >= g.currentPlayerRackLen {
 		currentPlayer.DealPiece(g.TakePiece())
 	}
 	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
 	g.Notify(fmt.Sprintf("%s's turn\n", g.CurrentPlayer().Name()))
 	g.currentPlayerRackLen = g.CurrentPlayer().RackLen()
+	return true
 }
 
 func (g *instance) IsGameOver() bool {

@@ -213,7 +213,7 @@ func (s *set) Split(index int) (Set, Set, error) {
 	if len(s.tiles) < 2 {
 		return nil, nil, errors.New(constants.TooFewPieces)
 	}
-	if index < 1 || index >= len(s.tiles) {
+	if index < 1 || len(s.tiles) - index <= 1  {
 		return nil, nil, errors.New(constants.IndexOutOfBounds(0, len(s.tiles)))
 	}
 	clone := s.cloneTiles()

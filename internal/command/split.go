@@ -47,5 +47,6 @@ func (s *split) Invoke() {
 		s.undoGame = s.game.Clone()
 		s.game.ReplaceSet(s.set, lowerSet)
 		s.game.AddSet(upperSet)
+		s.game.Notify()
 	}
 }

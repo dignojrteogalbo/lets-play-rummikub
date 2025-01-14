@@ -65,5 +65,6 @@ func (i *insert) Invoke() {
 		i.player.RemovePiece(i.piece)
 		i.game.RemovePieces(i.piece)
 		i.game.ReplaceSet(i.set, insert)
+		i.game.Notify()
 	}
 }

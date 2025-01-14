@@ -195,7 +195,7 @@
                             "command": "combine"
                         };
                         const pieces = [];
-                        if (mouse.selected.length < 3) {
+                        if (mouse.selected.length === 0) {
                             return
                         }
                         for (const piece of mouse.selected) {
@@ -209,13 +209,15 @@
                                 pieces.push(`p${rackIndex}`)
                                 continue
                             }
+                            // not a rack or loose piece, reset
+                            for (const tile of mouse.selected) {
+                                tile.setBackground("white");
+                                tile.draw();
+                            }
+                            mouse.selected = [];
+                            return
                         }
                         command["input"] = pieces.join(" ");
-                        for (const tile of mouse.selected) {
-                            tile.setBackground("white");
-                            tile.draw();
-                        }
-                        mouse.selected = [];
                         conn.send(JSON.stringify(command));
                     }
                 }
@@ -228,8 +230,8 @@
                     drawButton(this, "End Turn")
                 }
                 click(x, y) {
-                    if (this.isInBounds(x,y)) {
-                        const command = {"command": "end"};
+                    if (this.isInBounds(x, y)) {
+                        const command = { "command": "end" };
                         conn.send(JSON.stringify(command));
                     }
                 }
@@ -248,6 +250,32 @@
                     }
                 }
             }
+            class Split extends Bounds {
+                constructor(x, y) {
+                    super(x, y, buttonWidth, buttonHeight);
+                }
+                draw() {
+                    drawButton(this, "Split");
+                }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        const command = { "command": "split" };
+                        if (mouse.selected.length !== 1) {
+                            return
+                        }
+                        var pieceIndex = -1;
+                        const setIndex = board.children.findIndex(v => {
+                            pieceIndex = v.children.findIndex(s => s === mouse.selected[0]);
+                            return pieceIndex > -1
+                        });
+                        if (pieceIndex < 0 || setIndex < 0) {
+                            return
+                        }
+                        command["input"] = `${setIndex} ${pieceIndex}`
+                        conn.send(JSON.stringify(command));
+                    }
+                }
+            }
             class Mouse {
                 constructor() {
                     this.current = { x: 0, y: 0 };
@@ -255,20 +283,14 @@
                     this.mouseUp = { x: 0, y: 0 };
                     this.selected = [];
                     this.clicked = null;
-                    this.set = null;
                 }
 
                 click(element) {
                     if (element === null) {
                         this.clicked = null;
-                        this.set = null;
                     }
                     if (element instanceof Tile) {
                         this.clicked = element;
-                        return;
-                    }
-                    if (element instanceof Set) {
-                        this.set = element;
                         return;
                     }
                 }
@@ -280,6 +302,8 @@
             const endTurn = new EndTurn(width - piecePadding - buttonWidth - pieceBorderWidth - pieceBorderWidth, height - piecePadding - buttonHeight - pieceBorderWidth - pieceBorderWidth);
             const undo = new Undo(endTurn.x, endTurn.y - endTurn.height - piecePadding);
             const combine = new Combine(undo.x, undo.y - undo.height - piecePadding);
+            const split = new Split(combine.x, combine.y - combine.height - piecePadding);
+            var numberOfSets = 0;
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
 
@@ -320,6 +344,7 @@
                 endTurn.draw();
                 undo.draw();
                 combine.draw();
+                split.draw();
             }
 
             function updateRack(newRack) {
@@ -336,6 +361,7 @@
 
             function updateBoard(newBoard, newPieces) {
                 var updateBoard = newBoard.map(set => (new Set(0, 0, set["pieces"].map(piece => (new Tile(0, 0, piece["value"], piece["color"]))))));
+                numberOfSets = updateBoard.length;
                 updateBoard = [...updateBoard, ...newPieces.map(piece => (new Tile(0, 0, piece["value"], piece["color"])))];
                 board.setChildren(updateBoard);
             }
@@ -360,7 +386,7 @@
 
             game.onmousedown = function (event) {
                 mouse.mouseDown = mouseCoordinates(event);
-                for (const element of [board, rack, combine, undo, endTurn]) {
+                for (const element of [board, rack, split, combine, undo, endTurn]) {
                     element.click(mouse.mouseDown.x, mouse.mouseDown.y);
                 }
                 if (mouse.clicked == null) {
@@ -383,6 +409,48 @@
             }
 
             game.onmouseup = function (event) {
+                mouse.current = mouseCoordinates(event);
+                var pieceIndex = -1;
+                const setIndex = board.children.findIndex(v => {
+                    if (v.isInBounds(mouse.current.x, mouse.current.y)) {
+                        pieceIndex = v.children.findIndex(s => s.isInBounds(mouse.current.x, mouse.current.y));
+                        return pieceIndex > -1
+                    } else {
+                        return false
+                    }
+                });
+                if (pieceIndex < 0 || setIndex < 0) {
+                    // not over a set
+                    if (mouse.clicked !== null) {
+                        var pieceIndex = -1;
+                        const fromSet = board.children.findIndex(v => {
+                            pieceIndex = v.children.findIndex(p => p === mouse.clicked);
+                            return pieceIndex > -1;
+                        });
+                        const command = { "command": "remove" };
+                        if (fromSet > -1 && pieceIndex > -1) {
+                            command["input"] = `${fromSet} ${pieceIndex}`
+                            conn.send(JSON.stringify(command));
+                        }
+                    }
+                } else if (mouse.clicked !== null) {
+                    // over a set and dragging tile
+                    const set = board.children[setIndex];
+                    const piece = set.children[pieceIndex];
+                    var position = mouse.current.x > (piece.x + (piece.width / 2)) ? pieceIndex + 1 : pieceIndex;
+                    const command = { "command": "insert" };
+                    const rackIndex = rack.children.findIndex(p => p === mouse.clicked);
+                    const looseIndex = board.children.findIndex(p => p === mouse.clicked);
+                    if (rackIndex >= 0) {
+                        command["input"] = `${setIndex} r${rackIndex} ${position}`
+                    } else if (looseIndex >= 0) {
+                        command["input"] = `${setIndex} p${looseIndex - numberOfSets} ${position}`
+                    } else {
+                        mouse.click(null);
+                        return
+                    }
+                    conn.send(JSON.stringify(command));
+                }
                 mouse.click(null);
                 drawGame();
             }

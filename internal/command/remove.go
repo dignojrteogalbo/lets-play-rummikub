@@ -51,5 +51,6 @@ func (r *remove) Invoke() {
 		r.undoGame = r.game.Clone()
 		r.game.AddLoosePiece(r.piece)
 		r.game.ReplaceSet(r.set, remove)
+		r.game.Notify()
 	}
 }
