@@ -1,20 +1,13 @@
 package model
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"lets-play-rummikub/internal/constants"
 	"lets-play-rummikub/internal/event"
-	"lets-play-rummikub/internal/history"
 	"math/rand"
-	"os"
 	"time"
-)
-
-var (
-	Reader = bufio.NewReader(os.Stdin)
 )
 
 type (
@@ -24,7 +17,6 @@ type (
 		Set(index int) (Set, error)
 		AddSet(Set)
 		ReplaceSet(existing, replace Set)
-		Start(event.Listener, history.Stack[history.Undoable])
 		PrintBoard()
 		TakePiece() Piece
 		HasPiece
@@ -33,6 +25,7 @@ type (
 		IsValidBoard() bool
 		CurrentPlayer() Player
 		Player(index int) Player
+		NextTurn()
 		TotalPlayers() int
 		MarshalJSON() ([]byte, error)
 		Notify(message ...string)
@@ -42,12 +35,13 @@ type (
 
 	instance struct {
 		event.Listener
-		firstMeldComplete bool
-		tiles             []Piece
-		board             []Set
-		loose             []Piece
-		players           []Player
-		currentPlayer     int
+		firstMeldComplete    bool
+		tiles                []Piece
+		board                []Set
+		loose                []Piece
+		players              []Player
+		currentPlayer        int
+		currentPlayerRackLen int
 	}
 )
 
@@ -103,6 +97,7 @@ func NewGame(totalPlayers uint) Game {
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
 	instance.currentPlayer = 0
+	instance.currentPlayerRackLen = instance.CurrentPlayer().RackLen()
 	return instance
 }
 
@@ -217,42 +212,29 @@ func (g *instance) TotalPlayers() int {
 	return len(g.players)
 }
 
-func undoMoves(history history.Stack[history.Undoable], game Game) {
-	for {
-		if game.IsValidBoard() {
-			return
-		}
-		command := history.Pop()
-		if command == nil {
-			return
-		}
-		command.Undo()
-	}
-}
-
-func (g *instance) NextTurn(history history.Stack[history.Undoable]) {
-	fmt.Printf("Player #%d's turn\n", g.currentPlayer+1)
-	currentPlayer := g.CurrentPlayer()
-	playerScore := currentPlayer.Score()
-	g.CurrentPlayer().StartTurn(g)
+func (g *instance) NextTurn() {
 	if !g.IsValidBoard() {
-		fmt.Println("board has invalid sets")
-		undoMoves(history, g)
-	} else if !g.firstMeldComplete {
-		if g.hasSetWithJoker() {
-			fmt.Println("initial meld cannot contain joker")
-			undoMoves(history, g)
-		} else if !g.hasSetOverThirty() {
-			fmt.Println("initial meld must sum > 30")
-			undoMoves(history, g)
-		} else {
-			g.firstMeldComplete = true
-		}
+		g.Notify("board has invalid sets")
+		return
 	}
-	if playerScore >= currentPlayer.Score() {
+	if !g.firstMeldComplete {
+		if g.hasSetWithJoker() {
+			g.Notify("initial meld cannot contain joker")
+			return
+		}
+		if !g.hasSetOverThirty() {
+			fmt.Println("initial meld must sum > 30")
+			return
+		}
+		g.firstMeldComplete = true
+	}
+	currentPlayer := g.CurrentPlayer()
+	if g.currentPlayerRackLen >= currentPlayer.RackLen() {
 		currentPlayer.DealPiece(g.TakePiece())
 	}
 	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
+	g.Notify(fmt.Sprintf("%s's turn\n", g.CurrentPlayer().Name()))
+	g.currentPlayerRackLen = g.CurrentPlayer().RackLen()
 }
 
 func (g *instance) IsGameOver() bool {
@@ -313,14 +295,4 @@ func (game *instance) hasSetWithJoker() bool {
 		}
 	}
 	return false
-}
-
-func (g *instance) Start(listener event.Listener, history history.Stack[history.Undoable]) {
-	if g.Listener == nil && listener != nil {
-		g.Listener = listener
-	}
-	for !g.IsGameOver() {
-		g.NextTurn(history)
-	}
-	g.PrintScores()
 }

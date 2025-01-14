@@ -96,7 +96,6 @@ func (s *Server) handleCommands(message []byte) {
 	case "start":
 		if !s.gameStarted && len(s.clients) == s.game.TotalPlayers() {
 			s.gameStarted = true
-			s.game.Start(s, s.history)
 		} else {
 			for client := range s.clients {
 				client.send <- []byte("not enough players to start game")
