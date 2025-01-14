@@ -37,6 +37,7 @@ func Split(game model.Game, input string) (Command, error) {
 
 func (s *split) Undo() {
 	s.game.Restore(s.undoGame)
+	s.game.Notify()
 }
 
 func (s *split) Invoke() {

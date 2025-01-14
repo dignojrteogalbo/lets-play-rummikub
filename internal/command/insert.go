@@ -53,6 +53,7 @@ func Insert(player model.Player, game model.Game, input string) (Command, error)
 func (i *insert) Undo() {
 	i.game.Restore(i.undoGame)
 	i.player.Restore(i.undoPlayer)
+	i.game.Notify()
 }
 
 func (i *insert) Invoke() {

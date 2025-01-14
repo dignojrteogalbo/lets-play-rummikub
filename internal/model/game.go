@@ -29,6 +29,7 @@ type (
 		TotalPlayers() int
 		MarshalJSON() ([]byte, error)
 		Notify(message ...string)
+		SetNotifier(event.Listener)
 		Clone() Game
 		Restore(game Game)
 	}
@@ -176,6 +177,7 @@ func (g *instance) DealPieces() {
 			player.DealPiece(g.TakePiece())
 		}
 	}
+	g.currentPlayerRackLen = g.CurrentPlayer().RackLen()
 }
 
 func (g *instance) ReplaceSet(existing, replace Set) {
@@ -217,13 +219,13 @@ func (g *instance) NextTurn() {
 		g.Notify("board has invalid sets")
 		return
 	}
-	if !g.firstMeldComplete {
+	if !g.firstMeldComplete && len(g.board) > 0 {
 		if g.hasSetWithJoker() {
 			g.Notify("initial meld cannot contain joker")
 			return
 		}
 		if !g.hasSetOverThirty() {
-			fmt.Println("initial meld must sum > 30")
+			g.Notify("initial meld must sum > 30")
 			return
 		}
 		g.firstMeldComplete = true
@@ -295,4 +297,8 @@ func (game *instance) hasSetWithJoker() bool {
 		}
 	}
 	return false
+}
+
+func (game *instance) SetNotifier(n event.Listener) {
+	game.Listener = n
 }

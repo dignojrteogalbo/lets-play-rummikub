@@ -2,23 +2,10 @@ package main
 
 import (
 	"fmt"
-	"lets-play-rummikub/internal/model"
 	"lets-play-rummikub/internal/server"
 	"net/http"
 	"os"
 )
-
-func playLocally() {
-	totalPlayers := 5
-	game := model.NewGame(uint(totalPlayers))
-	fmt.Printf("Started game with %d players\n", totalPlayers)
-	game.Shuffle()
-	fmt.Println("Shuffling tiles...")
-	game.DealPieces()
-	fmt.Println("Dealing tiles to players...")
-	fmt.Println("Start game!")
-	game.Start(nil, nil)
-}
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.URL)
@@ -34,7 +21,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	gameServer := server.NewServer(5)
+	gameServer := server.NewServer(1)
 	go gameServer.Run()
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

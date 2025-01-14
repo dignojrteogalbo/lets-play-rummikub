@@ -51,7 +51,7 @@ func (c *Client) readPump() {
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		var event Event
-		if err := json.Unmarshal(message, &event); err == nil && c.server.gameStarted {
+		if err := json.Unmarshal(message, &event); err == nil {
 			c.handleCommand(event)
 		} else {
 			player := c.server.clients[c]

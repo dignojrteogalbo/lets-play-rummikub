@@ -41,6 +41,7 @@ func Remove(game model.Game, input string) (Command, error) {
 
 func (r *remove) Undo() {
 	r.game.Restore(r.undoGame)
+	r.game.Notify()
 }
 
 func (r *remove) Invoke() {

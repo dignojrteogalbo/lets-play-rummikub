@@ -17,6 +17,8 @@
             const tileHeight = pieceHeight + (2 * pieceBorderWidth);
             const fullTextHeight = 18;
             const halfTextHeight = fullTextHeight / 2;
+            const buttonWidth = 80;
+            const buttonHeight = 20;
             class Bounds {
                 constructor(x, y, width, height) {
                     this.x = x;
@@ -180,6 +182,72 @@
                     }
                 }
             }
+            class Combine extends Bounds {
+                constructor(x, y) {
+                    super(x, y, buttonWidth, buttonHeight)
+                }
+                draw() {
+                    drawButton(this, "Combine")
+                }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        const command = {
+                            "command": "combine"
+                        };
+                        const pieces = [];
+                        if (mouse.selected.length < 3) {
+                            return
+                        }
+                        for (const piece of mouse.selected) {
+                            const rackIndex = rack.children.findIndex(v => v === piece)
+                            if (rackIndex > -1) {
+                                pieces.push(`r${rackIndex}`)
+                                continue
+                            }
+                            const boardIndex = board.children.findIndex(v => v === piece)
+                            if (boardIndex > -1) {
+                                pieces.push(`p${rackIndex}`)
+                                continue
+                            }
+                        }
+                        command["input"] = pieces.join(" ");
+                        for (const tile of mouse.selected) {
+                            tile.setBackground("white");
+                            tile.draw();
+                        }
+                        mouse.selected = [];
+                        conn.send(JSON.stringify(command));
+                    }
+                }
+            }
+            class EndTurn extends Bounds {
+                constructor(x, y) {
+                    super(x, y, buttonWidth, buttonHeight)
+                }
+                draw() {
+                    drawButton(this, "End Turn")
+                }
+                click(x, y) {
+                    if (this.isInBounds(x,y)) {
+                        const command = {"command": "end"};
+                        conn.send(JSON.stringify(command));
+                    }
+                }
+            }
+            class Undo extends Bounds {
+                constructor(x, y) {
+                    super(x, y, buttonWidth, buttonHeight);
+                }
+                draw() {
+                    drawButton(this, "Undo");
+                }
+                click(x, y) {
+                    if (this.isInBounds(x, y)) {
+                        const command = { "command": "undo" };
+                        conn.send(JSON.stringify(command));
+                    }
+                }
+            }
             class Mouse {
                 constructor() {
                     this.current = { x: 0, y: 0 };
@@ -209,6 +277,9 @@
             const rack = new Rack(0, height - piecePadding - halfTextHeight, width, piecePadding + halfTextHeight);
             const board = new Board(0, 0, width, height - rack.height);
             const mouse = new Mouse();
+            const endTurn = new EndTurn(width - piecePadding - buttonWidth - pieceBorderWidth - pieceBorderWidth, height - piecePadding - buttonHeight - pieceBorderWidth - pieceBorderWidth);
+            const undo = new Undo(endTurn.x, endTurn.y - endTurn.height - piecePadding);
+            const combine = new Combine(undo.x, undo.y - undo.height - piecePadding);
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
 
@@ -226,6 +297,17 @@
                 ctx.fillText(text, x, y);
             }
 
+            function drawButton(button, text) {
+                ctx.fillStyle = "black";
+                ctx.fillRect(button.x, button.y, button.width + (2 * pieceBorderWidth), button.height + (2 * pieceBorderWidth));
+                ctx.fillStyle = "white";
+                ctx.fillRect(button.x + pieceBorderWidth, button.y + pieceBorderWidth, button.width, button.height);
+                ctx.fillStyle = "black";
+                ctx.font = "18px Arial";
+                var xOffsetText = button.x + piecePadding;
+                ctx.fillText(text, xOffsetText, button.y + pieceBorderWidth + (button.height / 2) + piecePadding);
+            }
+
             function drawBackground(x, y, width, height) {
                 ctx.fillStyle = "white";
                 ctx.fillRect(x, y, width, height);
@@ -235,14 +317,18 @@
                 drawBackground(0, 0, width, height);
                 rack.draw();
                 board.draw();
+                endTurn.draw();
+                undo.draw();
+                combine.draw();
             }
 
             function updateRack(newRack) {
                 rack.setChildren(newRack.map(piece => (new Tile(0, 0, piece["value"], piece["color"]))));
-                var numberOfRackRows = Math.floor((rack.children.length * (tileWidth + piecePadding)) / width) + 1;
+                var numberOfRackRows = Math.ceil((rack.children.length * (tileWidth + piecePadding)) / (width - combine.width - piecePadding));
                 var rackHeight = (numberOfRackRows * (tileHeight + piecePadding)) + piecePadding + halfTextHeight;
                 var rackY = height - rackHeight;
                 if (rackY !== rack.y) {
+                    rack.setDimensions(rack.width, rackHeight)
                     rack.setOrigin(0, rackY);
                     board.setDimensions(width, height - rackY);
                 }
@@ -274,7 +360,7 @@
 
             game.onmousedown = function (event) {
                 mouse.mouseDown = mouseCoordinates(event);
-                for (const element of [board, rack]) {
+                for (const element of [board, rack, combine, undo, endTurn]) {
                     element.click(mouse.mouseDown.x, mouse.mouseDown.y);
                 }
                 if (mouse.clicked == null) {

@@ -23,7 +23,7 @@ type ClientMessage struct {
 }
 
 func NewServer(totalPlayers uint) *Server {
-	return &Server{
+	server := &Server{
 		game:       model.NewGame(totalPlayers),
 		clients:    make(map[*Client]model.Player),
 		receive:    make(chan []byte),
@@ -31,6 +31,8 @@ func NewServer(totalPlayers uint) *Server {
 		unregister: make(chan *Client),
 		history:    history.NewStack[history.Undoable](),
 	}
+	server.game.SetNotifier(server)
+	return server
 }
 
 func (s *Server) Notify(message ...string) {
@@ -65,45 +67,6 @@ func (s *Server) Run() {
 				delete(s.clients, client)
 				close(client.send)
 			}
-		case message := <-s.receive:
-			go s.handleCommands(message)
-		}
-	}
-}
-
-func (s *Server) handleCommands(message []byte) {
-	switch string(message) {
-	case "shuffle":
-		if !s.tilesShuffled {
-			s.game.Shuffle()
-			s.tilesShuffled = true
-		}
-	case "deal":
-		if !s.tilesDealt && len(s.clients) == s.game.TotalPlayers() {
-			s.game.DealPieces()
-			for client, player := range s.clients {
-				playerState, err := player.MarshalJSON()
-				if err == nil {
-					client.send <- playerState
-				}
-			}
-			s.tilesDealt = true
-		} else {
-			for client := range s.clients {
-				client.send <- []byte("not enough players connected to deal pieces")
-			}
-		}
-	case "start":
-		if !s.gameStarted && len(s.clients) == s.game.TotalPlayers() {
-			s.gameStarted = true
-		} else {
-			for client := range s.clients {
-				client.send <- []byte("not enough players to start game")
-			}
-		}
-	default:
-		for client := range s.clients {
-			client.send <- message
 		}
 	}
 }
