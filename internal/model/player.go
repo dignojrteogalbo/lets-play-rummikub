@@ -4,29 +4,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"lets-play-rummikub/internal/history"
-	"strconv"
-	"strings"
+	"lets-play-rummikub/internal/constants"
 )
 
 type (
 	Player interface {
 		DealPiece(Piece)
-		StartTurn(game Game)
 		Score() uint16
-		Message(message string)
 		MarshalJSON() ([]byte, error)
 		Name() string
 		SetName(string)
-		history.Cloneable
-		history.History
+		RemovePiece(pieces ...Piece)
+		HasPiece
+		StartTurn(game Game)
+		EndTurn()
+		Clone() Player
+		Restore(Player)
 	}
 
 	player struct {
-		name     string
-		rack     []Piece
-		messages chan string
-		history.History
+		name    string
+		rack    []Piece
+		endTurn chan bool
 	}
 )
 
@@ -39,30 +38,30 @@ func (p *player) MarshalJSON() ([]byte, error) {
 	return json.Marshal(output)
 }
 
-func (p *player) Message(m string) {
-	p.messages <- m
-}
-
-func (p *player) Clone() history.Cloneable {
+func (p *player) Clone() Player {
 	rack := make([]Piece, len(p.rack))
 	copy(rack, p.rack)
 	return &player{rack: rack}
 }
 
-func (p *player) Restore(newPlayer history.Cloneable) {
-	player, ok := newPlayer.(*player)
+func (p *player) Restore(restorePlayer Player) {
+	restore, ok := restorePlayer.(*player)
 	if !ok {
 		return
 	}
-	p.rack = player.rack
+	p.rack = restore.rack
 }
 
 func NewPlayer() Player {
-	instance := new(player)
-	instance.rack = make([]Piece, 0)
-	instance.History = history.NewHistory(instance)
-	instance.messages = make(chan string)
-	return instance
+	return &player{"", make([]Piece, 0), make(chan bool)}
+}
+
+func (p *player) StartTurn(game Game) {
+	<-p.endTurn
+}
+
+func (p *player) EndTurn() {
+	p.endTurn <- true
 }
 
 func (p *player) Name() string {
@@ -88,20 +87,6 @@ func (p *player) printRack() {
 	fmt.Printf("=== Rack ===\n%s=== Rack ===\n", rack.String())
 }
 
-func (player *player) StartTurn(game Game) {
-	for {
-		game.PrintBoard()
-		player.printRack()
-		game.Notify()
-		command := <-player.messages
-		command = strings.TrimSpace(command)
-		if command == "done" {
-			break
-		}
-		player.parseCommand(command, game)
-	}
-}
-
 func (p *player) Score() uint16 {
 	score := uint16(0)
 	for _, piece := range p.rack {
@@ -110,7 +95,7 @@ func (p *player) Score() uint16 {
 	return score
 }
 
-func (player *player) removePiece(pieces ...Piece) {
+func (player *player) RemovePiece(pieces ...Piece) {
 	for _, piece := range pieces {
 		for index, p := range player.rack {
 			if piece.IsSamePiece(p) {
@@ -121,213 +106,9 @@ func (player *player) removePiece(pieces ...Piece) {
 	}
 }
 
-func (p *player) promptForSet(game Game) (Set, error) {
-	game.Notify("select a set: ")
-	input := <-p.messages
-	input = strings.TrimSpace(input)
-	setIndex, err := parseInt(input)
-	if err != nil {
-		return nil, err
-	}
-	set, err := game.Set(setIndex)
-	if err != nil {
-		return nil, err
-	}
-	return set, nil
-}
-
-func (player *player) insert(game Game) error {
-	set, err := player.promptForSet(game)
-	if err != nil {
-		return err
-	}
-	game.Notify("select a piece <r#|p#> : ")
-	input := <-player.messages
-	input = strings.TrimSpace(input)
-	piece, err := player.selectPiece(input, game)
-	if err != nil {
-		return err
-	}
-	game.Notify(fmt.Sprintf("select index [0, %d] : ", set.Len()))
-	input = <-player.messages
-	input = strings.TrimSpace(input)
-	index, err := parseInt(input)
-	if err != nil {
-		return err
-	}
-	insert, err := set.Insert(piece, index)
-	if err != nil {
-		return err
-	}
-	player.removePiece(piece)
-	game.RemovePieces(piece)
-	game.ReplaceSet(set, insert)
-	return nil
-}
-
-func (player *player) combine(game Game) error {
-	pieces := make([]Piece, 0)
-	for {
-		game.Notify("select a piece <r#|p#|done> : ")
-		input := <-player.messages
-		input = strings.TrimSpace(input)
-		if input == "done" {
-			break
-		}
-		piece, err := player.selectPiece(input, game)
-		if err != nil {
-			return err
-		}
-		pieces = append(pieces, piece)
-		game.Notify("=== Selected Pieces ===\n%s=======================\n", (&set{tiles: pieces}).String())
-	}
-	set := Combine(pieces...)
-	player.removePiece(pieces...)
-	game.RemovePieces(pieces...)
-	game.AddSet(set)
-	return nil
-}
-
-func (player *player) remove(game Game) error {
-	set, err := player.promptForSet(game)
-	if err != nil {
-		return err
-	}
-	game.Notify(fmt.Sprintf("select index [0, %d] : ", set.Len()))
-	input := <-player.messages
-	input = strings.TrimSpace(input)
-	index, err := parseInt(input)
-	if err != nil {
-		return err
-	}
-	piece, err := set.Piece(index)
-	if err != nil {
-		return err
-	}
-	remove, err := set.Remove(piece)
-	if err != nil {
-		return err
-	}
-	game.AddLoosePiece(piece)
-	game.ReplaceSet(set, remove)
-	return nil
-}
-
-func (player *player) split(game Game) error {
-	set, err := player.promptForSet(game)
-	if err != nil {
-		return err
-	}
-	if set.Len() < 2 {
-		return errors.New(CannotSplit)
-	}
-	game.Notify(fmt.Sprintf("select index [1, %d] : ", set.Len()))
-	input := <-player.messages
-	input = strings.TrimSpace(input)
-	index, err := parseInt(input)
-	if err != nil {
-		return err
-	}
-	lowerSet, upperSet, err := set.Split(index)
-	if err != nil {
-		return err
-	}
-	game.ReplaceSet(set, lowerSet)
-	game.AddSet(upperSet)
-	return nil
-}
-
-func (player *player) parseCommand(input string, game Game) {
-	gameBeforeCommand := game.Clone()
-	playerBeforeCommand := player.Clone()
-	switch input {
-	case "done":
-	case "combine":
-		if err := player.combine(game); err != nil {
-			game.Notify(err.Error())
-			return
-		}
-		game.Append(gameBeforeCommand)
-		player.Append(playerBeforeCommand)
-	case "split":
-		if err := player.split(game); err != nil {
-			game.Notify(err.Error())
-			return
-		}
-		game.Append(gameBeforeCommand)
-		player.Append(playerBeforeCommand)
-	case "insert":
-		if err := player.insert(game); err != nil {
-			game.Notify(err.Error())
-			return
-		}
-		game.Append(gameBeforeCommand)
-		player.Append(playerBeforeCommand)
-	case "remove":
-		if err := player.remove(game); err != nil {
-			game.Notify(err.Error())
-			return
-		}
-		game.Append(gameBeforeCommand)
-		player.Append(playerBeforeCommand)
-	case "undo":
-		game.Undo()
-		player.Undo()
-	case "help":
-		game.Notify("valid commands are: combine, split, insert, remove, undo, help, done")
-	default:
-		game.Notify("invalid command")
-	}
-}
-
-func parseInt(input string) (int, error) {
-	result, err := strconv.ParseInt(input, 0, 16)
-	if err != nil {
-		return -1, errors.New(InvalidNumberInput)
-	}
-	return int(result), nil
-}
-
 func (p *player) Piece(index int) (Piece, error) {
-	if index < 0 || index > len(p.rack)-1 {
-		return nil, errors.New(IndexOutOfBounds(-1, len(p.rack), "piece"))
+	if index < 0 || index >= len(p.rack) {
+		return nil, errors.New(constants.InvalidPieceSelection)
 	}
 	return p.rack[index], nil
-}
-
-func (player *player) selectPiece(input string, game Game) (Piece, error) {
-	input = strings.TrimSpace(input)
-	start, selection := string(input[0]), string(input[1:])
-	switch start {
-	default:
-		return nil, errors.New(InvalidPieceSelection)
-	case "r":
-		return player.selectRackPiece(selection)
-	case "p":
-		return selectLoosePiece(selection, game)
-	}
-}
-
-func (player *player) selectRackPiece(selection string) (Piece, error) {
-	index, err := parseInt(selection)
-	if err != nil {
-		return nil, err
-	}
-	piece, err := player.Piece(index)
-	if err != nil {
-		return nil, err
-	}
-	return piece, nil
-}
-
-func selectLoosePiece(selection string, game Game) (Piece, error) {
-	index, err := parseInt(selection)
-	if err != nil {
-		return nil, err
-	}
-	piece := game.Piece(index)
-	if piece == nil {
-		return nil, errors.New(InvalidPieceSelection)
-	}
-	return piece, nil
 }

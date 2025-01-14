@@ -2,9 +2,9 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -50,18 +50,12 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		stringMessage := string(message)
-		player := c.server.clients[c]
-		if currentPlayer := c.server.gameInstance.CurrentPlayer(); c.server.gameStarted && currentPlayer == c.server.clients[c] {
-			c.send <- message
-			currentPlayer.Message(stringMessage)
-		} else if strings.HasPrefix(stringMessage, "/name ") {
-			player.SetName(stringMessage[6:])
-			c.send <- []byte(fmt.Sprintf("your name is set to: %s", stringMessage[6:]))
-		} else if strings.HasPrefix(stringMessage, "/") {
-			c.server.receive <- message[1:]
+		var event Event
+		if err := json.Unmarshal(message, &event); err == nil {
+			c.handleCommand(event)
 		} else {
-			c.server.receive <- []byte(fmt.Sprintf("%s: %s", player.Name(), stringMessage))
+			player := c.server.clients[c]
+			c.server.receive <- []byte(fmt.Sprintf("%s: %s", player.Name(), string(message)))
 		}
 	}
 }

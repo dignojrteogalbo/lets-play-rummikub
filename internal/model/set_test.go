@@ -1,6 +1,7 @@
 package model
 
 import (
+	"lets-play-rummikub/internal/constants"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -156,16 +157,16 @@ func TestPiece(t *testing.T) {
 	t.Run("ShouldReturnErrorOnEmptySet", func(t *testing.T) {
 		get := new(set)
 		result, err := get.Piece(0)
-		assert.EqualError(t, err, InvalidSet)
+		assert.EqualError(t, err, constants.InvalidPieceSelection)
 		assert.Nil(t, result)
 	})
 	t.Run("ShouldReturnErrorOnInvalidIndex", func(t *testing.T) {
 		get := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack)}}
 		piece, err := get.Piece(-1)
-		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
+		assert.EqualError(t, err, constants.InvalidPieceSelection)
 		assert.Nil(t, piece)
 		piece, err = get.Piece(1)
-		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
+		assert.EqualError(t, err, constants.InvalidPieceSelection)
 		assert.Nil(t, piece)
 	})
 }
@@ -244,21 +245,21 @@ func TestInsert(t *testing.T) {
 		set := new(set)
 		piece := NewPiece(ValueJoker, ColorBlack)
 		inserted, err := set.Insert(piece, -1)
-		assert.EqualError(t, err, IndexOutOfBounds(-1, 1))
+		assert.EqualError(t, err, constants.IndexOutOfBounds(-1, 1))
 		assert.Nil(t, inserted)
 	})
 	t.Run("ShouldReturnErrorOnIndexOutOfBounds", func(t *testing.T) {
 		set := &set{tiles: []Piece{NewPiece(Value(5), ColorBlack)}}
 		piece := NewPiece(ValueJoker, ColorBlack)
 		inserted, err := set.Insert(piece, 73)
-		assert.EqualError(t, err, IndexOutOfBounds(-1, 2))
+		assert.EqualError(t, err, constants.IndexOutOfBounds(-1, 2))
 		assert.Nil(t, inserted)
 	})
 	t.Run("ShouldReturnErrorOnExistingPiece", func(t *testing.T) {
 		piece := NewPiece(Value(9), ColorBlack)
 		set := &set{tiles: []Piece{piece}}
 		inserted, err := set.Insert(piece, 1)
-		assert.EqualError(t, err, InvalidPiece)
+		assert.EqualError(t, err, constants.InvalidPiece)
 		assert.Nil(t, inserted)
 	})
 }
@@ -304,7 +305,7 @@ func TestRemove(t *testing.T) {
 		emptySet := new(set)
 		removed, err := emptySet.Remove(piece)
 		assert.Empty(t, emptySet.tiles)
-		assert.EqualError(t, err, InvalidSet)
+		assert.EqualError(t, err, constants.InvalidSet)
 		assert.Nil(t, removed)
 	})
 	t.Run("ShouldReturnErrorOnNotExistingPiece", func(t *testing.T) {
@@ -312,7 +313,7 @@ func TestRemove(t *testing.T) {
 		original := &set{tiles: []Piece{NewPiece(Value(10), ColorBlack)}}
 		removed, err := original.Remove(piece)
 		assert.Len(t, original.tiles, 1)
-		assert.EqualError(t, err, InvalidPiece)
+		assert.EqualError(t, err, constants.InvalidPiece)
 		assert.Nil(t, removed)
 	})
 }
@@ -337,7 +338,7 @@ func TestSplit(t *testing.T) {
 		original := &set{tiles: []Piece{NewPiece(Value(5), ColorGreen)}}
 		lower, upper, err := original.Split(0)
 		assert.Len(t, original.tiles, 1)
-		assert.EqualError(t, err, TooFewPieces)
+		assert.EqualError(t, err, constants.TooFewPieces)
 		assert.Nil(t, lower)
 		assert.Nil(t, upper)
 	})
@@ -345,12 +346,12 @@ func TestSplit(t *testing.T) {
 		original := &set{tiles: []Piece{NewPiece(Value(1), ColorBlack), NewPiece(Value(2), ColorBlack)}}
 		lower, upper, err := original.Split(-1)
 		assert.Len(t, original.tiles, 2)
-		assert.EqualError(t, err, IndexOutOfBounds(0, 2))
+		assert.EqualError(t, err, constants.IndexOutOfBounds(0, 2))
 		assert.Nil(t, lower)
 		assert.Nil(t, upper)
 		lower, upper, err = original.Split(2)
 		assert.Len(t, original.tiles, 2)
-		assert.EqualError(t, err, IndexOutOfBounds(0, 2))
+		assert.EqualError(t, err, constants.IndexOutOfBounds(0, 2))
 		assert.Nil(t, lower)
 		assert.Nil(t, upper)
 	})

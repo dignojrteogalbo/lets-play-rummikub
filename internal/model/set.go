@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"lets-play-rummikub/internal/constants"
 )
 
 type (
@@ -16,9 +17,9 @@ type (
 		Split(index int) (Set, Set, error)
 		String() string
 		MarshalJSON() ([]byte, error)
-		Piece(index int) (Piece, error)
 		Clone() Set
 		IsValidSet() bool
+		HasPiece
 	}
 
 	set struct {
@@ -69,11 +70,8 @@ func (s *set) String() string {
 }
 
 func (s *set) Piece(index int) (Piece, error) {
-	if len(s.tiles) == 0 {
-		return nil, errors.New(InvalidSet)
-	}
 	if index < 0 || index >= len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(-1, len(s.tiles)))
+		return nil, errors.New(constants.InvalidPieceSelection)
 	}
 	return s.tiles[index], nil
 }
@@ -184,10 +182,10 @@ func (s *set) cloneTiles() []Piece {
 
 func (s *set) Insert(piece Piece, index int) (Set, error) {
 	if index < 0 || index > len(s.tiles) {
-		return nil, errors.New(IndexOutOfBounds(-1, len(s.tiles)+1))
+		return nil, errors.New(constants.IndexOutOfBounds(-1, len(s.tiles)+1))
 	}
 	if len(s.tiles) != 0 && s.findIndex(piece) >= 0 {
-		return nil, errors.New(InvalidPiece)
+		return nil, errors.New(constants.InvalidPiece)
 	}
 	clone := &set{tiles: s.cloneTiles()}
 	clone.insertPiece(piece, index)
@@ -198,11 +196,11 @@ func (s *set) Insert(piece Piece, index int) (Set, error) {
 
 func (s *set) Remove(piece Piece) (Set, error) {
 	if len(s.tiles) == 0 {
-		return nil, errors.New(InvalidSet)
+		return nil, errors.New(constants.InvalidSet)
 	}
 	var index int
 	if index = s.findIndex(piece); index < 0 {
-		return nil, errors.New(InvalidPiece)
+		return nil, errors.New(constants.InvalidPiece)
 	}
 	clone := &set{tiles: s.cloneTiles()}
 	clone.removePiece(index)
@@ -213,10 +211,10 @@ func (s *set) Remove(piece Piece) (Set, error) {
 
 func (s *set) Split(index int) (Set, Set, error) {
 	if len(s.tiles) < 2 {
-		return nil, nil, errors.New(TooFewPieces)
+		return nil, nil, errors.New(constants.TooFewPieces)
 	}
 	if index < 1 || index >= len(s.tiles) {
-		return nil, nil, errors.New(IndexOutOfBounds(0, len(s.tiles)))
+		return nil, nil, errors.New(constants.IndexOutOfBounds(0, len(s.tiles)))
 	}
 	clone := s.cloneTiles()
 	return &set{tiles: clone[:index]}, &set{tiles: clone[index:]}, nil

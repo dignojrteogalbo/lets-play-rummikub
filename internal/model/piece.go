@@ -43,6 +43,10 @@ type (
 		MarshalJSON() ([]byte, error)
 	}
 
+	HasPiece interface {
+		Piece(index int) (Piece, error)
+	}
+
 	piece struct {
 		value Value
 		color Color

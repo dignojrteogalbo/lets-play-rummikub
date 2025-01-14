@@ -17,7 +17,7 @@ func playLocally() {
 	game.DealPieces()
 	fmt.Println("Dealing tiles to players...")
 	fmt.Println("Start game!")
-	game.Start(nil)
+	game.Start(nil, nil)
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {

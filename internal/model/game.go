@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"lets-play-rummikub/internal/constants"
 	"lets-play-rummikub/internal/event"
 	"lets-play-rummikub/internal/history"
 	"math/rand"
@@ -23,10 +24,10 @@ type (
 		Set(index int) (Set, error)
 		AddSet(Set)
 		ReplaceSet(existing, replace Set)
-		Start(event.Listener)
+		Start(event.Listener, history.Stack[history.Undoable])
 		PrintBoard()
 		TakePiece() Piece
-		Piece(index int) Piece
+		HasPiece
 		AddLoosePiece(piece Piece)
 		RemovePieces(piece ...Piece)
 		IsValidBoard() bool
@@ -35,8 +36,8 @@ type (
 		TotalPlayers() int
 		MarshalJSON() ([]byte, error)
 		Notify(message ...string)
-		history.History
-		history.Cloneable
+		Clone() Game
+		Restore(game Game)
 	}
 
 	instance struct {
@@ -47,7 +48,6 @@ type (
 		loose             []Piece
 		players           []Player
 		currentPlayer     int
-		history.History
 	}
 )
 
@@ -103,11 +103,10 @@ func NewGame(totalPlayers uint) Game {
 	instance.createTiles()
 	instance.createPlayers(int(totalPlayers))
 	instance.currentPlayer = 0
-	instance.History = history.NewHistory(instance)
 	return instance
 }
 
-func (game *instance) Clone() history.Cloneable {
+func (game *instance) Clone() Game {
 	newGame := new(instance)
 	board := make([]Set, len(game.board))
 	for i := range game.board {
@@ -120,13 +119,13 @@ func (game *instance) Clone() history.Cloneable {
 	return newGame
 }
 
-func (game *instance) Restore(newGame history.Cloneable) {
-	setInstance, ok := newGame.(*instance)
-	if !ok || setInstance == nil {
+func (game *instance) Restore(restore Game) {
+	restoreGame, ok := restore.(*instance)
+	if !ok || restoreGame == nil {
 		return
 	}
-	game.board = setInstance.board
-	game.loose = setInstance.loose
+	game.board = restoreGame.board
+	game.loose = restoreGame.loose
 }
 
 func (game *instance) IsValidBoard() bool {
@@ -154,11 +153,11 @@ func (g *instance) TakePiece() Piece {
 	return piece
 }
 
-func (g *instance) Piece(index int) Piece {
-	if len(g.loose) == 0 || index < 0 || index >= len(g.loose) {
-		return nil
+func (g *instance) Piece(index int) (Piece, error) {
+	if index < 0 || index >= len(g.loose) {
+		return nil, errors.New(constants.InvalidPieceSelection)
 	}
-	return g.loose[index]
+	return g.loose[index], nil
 }
 
 func (g *instance) AddLoosePiece(piece Piece) {
@@ -198,7 +197,7 @@ func (g *instance) ReplaceSet(existing, replace Set) {
 
 func (g *instance) Set(index int) (Set, error) {
 	if index < 0 || index > len(g.board)-1 {
-		return nil, errors.New(IndexOutOfBounds(-1, len(g.board), "set"))
+		return nil, errors.New(constants.InvalidSetSelection)
 	}
 	return g.board[index], nil
 }
@@ -218,21 +217,34 @@ func (g *instance) TotalPlayers() int {
 	return len(g.players)
 }
 
-func (g *instance) NextTurn() {
+func undoMoves(history history.Stack[history.Undoable], game Game) {
+	for {
+		if game.IsValidBoard() {
+			return
+		}
+		command := history.Pop()
+		if command == nil {
+			return
+		}
+		command.Undo()
+	}
+}
+
+func (g *instance) NextTurn(history history.Stack[history.Undoable]) {
 	fmt.Printf("Player #%d's turn\n", g.currentPlayer+1)
 	currentPlayer := g.CurrentPlayer()
 	playerScore := currentPlayer.Score()
 	g.CurrentPlayer().StartTurn(g)
 	if !g.IsValidBoard() {
 		fmt.Println("board has invalid sets")
-		g.restoreGameState()
+		undoMoves(history, g)
 	} else if !g.firstMeldComplete {
 		if g.hasSetWithJoker() {
 			fmt.Println("initial meld cannot contain joker")
-			g.restoreGameState()
+			undoMoves(history, g)
 		} else if !g.hasSetOverThirty() {
 			fmt.Println("initial meld must sum > 30")
-			g.restoreGameState()
+			undoMoves(history, g)
 		} else {
 			g.firstMeldComplete = true
 		}
@@ -240,8 +252,6 @@ func (g *instance) NextTurn() {
 	if playerScore >= currentPlayer.Score() {
 		currentPlayer.DealPiece(g.TakePiece())
 	}
-	g.Clear()
-	currentPlayer.Clear()
 	g.currentPlayer = (g.currentPlayer + 1) % len(g.players)
 }
 
@@ -286,16 +296,6 @@ func (g *instance) AddSet(set Set) {
 	g.board = append(g.board, set)
 }
 
-func (game *instance) restoreGameState() {
-	currentPlayer := game.players[game.currentPlayer]
-	for {
-		moves, board := currentPlayer.Undo(), game.Undo()
-		if game.IsValidBoard() || (board == nil && moves == nil) {
-			break
-		}
-	}
-}
-
 func (game *instance) hasSetOverThirty() bool {
 	overThirtyPoints := false
 	for _, set := range game.board {
@@ -315,12 +315,12 @@ func (game *instance) hasSetWithJoker() bool {
 	return false
 }
 
-func (g *instance) Start(listener event.Listener) {
+func (g *instance) Start(listener event.Listener, history history.Stack[history.Undoable]) {
 	if g.Listener == nil && listener != nil {
 		g.Listener = listener
 	}
 	for !g.IsGameOver() {
-		g.NextTurn()
+		g.NextTurn(history)
 	}
 	g.PrintScores()
 }

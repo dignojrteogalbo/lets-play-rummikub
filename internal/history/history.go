@@ -1,41 +1,38 @@
 package history
 
 type (
-	Cloneable interface {
-		Clone() Cloneable
-		Restore(Cloneable)
+	Undoable interface {
+		Undo()
 	}
 
-	History interface {
-		Undo() Cloneable
-		Append(Cloneable)
+	Stack[T any] interface {
+		Pop() T
+		Push(T)
 		Clear()
 	}
 
-	historyInstance struct {
-		original Cloneable
-		states   []Cloneable
+	stack[T any] struct {
+		states []T
 	}
 )
 
-func (h *historyInstance) Undo() Cloneable {
-	if len(h.states) == 0 {
-		return nil
+func (s *stack[T]) Pop() T {
+	if len(s.states) == 0 {
+		return *new(T)
 	}
-	top := h.states[len(h.states)-1]
-	h.original.Restore(top)
-	h.states = h.states[:len(h.states)-1]
+	top := s.states[len(s.states)-1]
+	s.states = s.states[:len(s.states)-1]
 	return top
 }
 
-func (h *historyInstance) Append(clone Cloneable) {
-	h.states = append(h.states, clone)
+func (h *stack[T]) Push(push T) {
+	h.states = append(h.states, push)
 }
 
-func (h *historyInstance) Clear() {
+func (h *stack[T]) Clear() {
 	h.states = nil
 }
 
-func NewHistory(original Cloneable) History {
-	return &historyInstance{original: original}
+func NewStack[T any]() Stack[T] {
+	return &stack[T]{states: make([]T, 0)}
 }
